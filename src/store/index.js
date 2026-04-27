@@ -42,6 +42,13 @@ export default new Vuex.Store({
     sidebar: {
       opened: localStorage.getItem('sidebarStatus') ? !!+localStorage.getItem('sidebarStatus') : true,
       withoutAnimation: false
+    },
+    theme: {
+      menuNavigation: localStorage.getItem('menuNavigation') || 'sidebar',
+      themeStyle: localStorage.getItem('themeStyle') || 'light',
+      themeColor: localStorage.getItem('themeColor') || '#409EFF',
+      grayMode: localStorage.getItem('grayMode') === 'true',
+      showWatermark: localStorage.getItem('showWatermark') === 'true'
     }
   },
   getters: {
@@ -58,7 +65,13 @@ export default new Vuex.Store({
     },
     userRole: state => {
       return state.userInfo.role || 'user'
-    }
+    },
+    theme: state => state.theme,
+    menuNavigation: state => state.theme.menuNavigation,
+    themeStyle: state => state.theme.themeStyle,
+    themeColor: state => state.theme.themeColor,
+    grayMode: state => state.theme.grayMode,
+    showWatermark: state => state.theme.showWatermark
   },
   mutations: {
     SET_TOKEN: (state, token) => {
@@ -91,6 +104,26 @@ export default new Vuex.Store({
       state.userInfo = {}
       localStorage.removeItem('token')
       localStorage.removeItem('userInfo')
+    },
+    SET_MENU_NAVIGATION: (state, menuNavigation) => {
+      state.theme.menuNavigation = menuNavigation
+      localStorage.setItem('menuNavigation', menuNavigation)
+    },
+    SET_THEME_STYLE: (state, themeStyle) => {
+      state.theme.themeStyle = themeStyle
+      localStorage.setItem('themeStyle', themeStyle)
+    },
+    SET_THEME_COLOR: (state, themeColor) => {
+      state.theme.themeColor = themeColor
+      localStorage.setItem('themeColor', themeColor)
+    },
+    SET_GRAY_MODE: (state, grayMode) => {
+      state.theme.grayMode = grayMode
+      localStorage.setItem('grayMode', grayMode)
+    },
+    SET_SHOW_WATERMARK: (state, showWatermark) => {
+      state.theme.showWatermark = showWatermark
+      localStorage.setItem('showWatermark', showWatermark)
     }
   },
   actions: {
@@ -135,6 +168,21 @@ export default new Vuex.Store({
         }
         commit('SET_FULLSCREEN', false)
       }
+    },
+    setMenuNavigation({ commit }, menuNavigation) {
+      commit('SET_MENU_NAVIGATION', menuNavigation)
+    },
+    setThemeStyle({ commit }, themeStyle) {
+      commit('SET_THEME_STYLE', themeStyle)
+    },
+    setThemeColor({ commit }, themeColor) {
+      commit('SET_THEME_COLOR', themeColor)
+    },
+    setGrayMode({ commit }, grayMode) {
+      commit('SET_GRAY_MODE', grayMode)
+    },
+    setShowWatermark({ commit }, showWatermark) {
+      commit('SET_SHOW_WATERMARK', showWatermark)
     }
   }
 })

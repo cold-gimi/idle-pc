@@ -87,6 +87,9 @@
                 <el-dropdown-item command="profile">
                   <i class="el-icon-user"></i> 个人中心
                 </el-dropdown-item>
+                <el-dropdown-item command="settings">
+                  <i class="el-icon-setting"></i> 设置
+                </el-dropdown-item>
                 <el-dropdown-item divided command="logout">
                   <i class="el-icon-switch-button"></i> 退出登录
                 </el-dropdown-item>
@@ -99,6 +102,70 @@
         </el-main>
       </el-container>
     </el-container>
+    <el-drawer
+      title="系统设置"
+      :visible.sync="settingsDrawerVisible"
+      :before-close="handleCloseSettings"
+      size="360px"
+    >
+      <div class="settings-container">
+        <el-tabs v-model="activeSettingTab">
+          <el-tab-pane label="菜单导航" name="navigation">
+            <div class="setting-item">
+              <span class="setting-label">菜单导航方式</span>
+              <el-radio-group v-model="localSettings.menuNavigation" @change="handleMenuNavigationChange">
+                <el-radio-button label="sidebar">侧边栏</el-radio-button>
+                <el-radio-button label="top">顶部</el-radio-button>
+              </el-radio-group>
+            </div>
+          </el-tab-pane>
+          <el-tab-pane label="主题风格" name="theme">
+            <div class="setting-item">
+              <span class="setting-label">主题风格</span>
+              <el-radio-group v-model="localSettings.themeStyle" @change="handleThemeStyleChange">
+                <el-radio-button label="light">浅色</el-radio-button>
+                <el-radio-button label="dark">深色</el-radio-button>
+              </el-radio-group>
+            </div>
+          </el-tab-pane>
+          <el-tab-pane label="主题颜色" name="color">
+            <div class="setting-item">
+              <span class="setting-label">主题颜色</span>
+              <div class="color-picker-container">
+                <div
+                  v-for="color in themeColors"
+                  :key="color.value"
+                  class="color-item"
+                  :class="{ active: localSettings.themeColor === color.value }"
+                  :style="{ backgroundColor: color.value }"
+                  @click="handleThemeColorChange(color.value)"
+                ></div>
+              </div>
+            </div>
+          </el-tab-pane>
+          <el-tab-pane label="其他设置" name="other">
+            <div class="setting-item">
+              <span class="setting-label">灰色模式</span>
+              <el-switch
+                v-model="localSettings.grayMode"
+                active-text="开启"
+                inactive-text="关闭"
+                @change="handleGrayModeChange"
+              ></el-switch>
+            </div>
+            <div class="setting-item">
+              <span class="setting-label">显示水印</span>
+              <el-switch
+                v-model="localSettings.showWatermark"
+                active-text="开启"
+                inactive-text="关闭"
+                @change="handleShowWatermarkChange"
+              ></el-switch>
+            </div>
+          </el-tab-pane>
+        </el-tabs>
+      </div>
+    </el-drawer>
   </div>
 </template>
 
@@ -112,14 +179,33 @@ export default {
       headerSearchKeyword: '',
       isFullscreen: false,
       showSearchResults: false,
-      filteredMenuList: []
+      filteredMenuList: [],
+      settingsDrawerVisible: false,
+      activeSettingTab: 'navigation',
+      localSettings: {
+        menuNavigation: 'sidebar',
+        themeStyle: 'light',
+        themeColor: '#409EFF',
+        grayMode: false,
+        showWatermark: false
+      },
+      themeColors: [
+        { name: '默认蓝', value: '#409EFF' },
+        { name: '玫瑰红', value: '#F56C6C' },
+        { name: '橘子橙', value: '#E6A23C' },
+        { name: '橄榄绿', value: '#67C23A' },
+        { name: '薄荷绿', value: '#20B2AA' },
+        { name: '紫色', value: '#9B59B6' },
+        { name: '粉色', value: '#FF69B4' },
+        { name: '青色', value: '#00BFFF' }
+      ]
     }
   },
   computed: {
     ...mapState({
       sidebar: state => state.sidebar
     }),
-    ...mapGetters(['userInfo', 'menuList']),
+    ...mapGetters(['userInfo', 'menuList', 'theme', 'menuNavigation', 'themeStyle', 'themeColor', 'grayMode', 'showWatermark']),
     sidebarWidth() {
       return this.sidebar.opened ? '210px' : '64px'
     },
@@ -142,7 +228,7 @@ export default {
     document.removeEventListener('click', this.handleClickOutside)
   },
   methods: {
-    ...mapActions(['toggleSideBar', 'toggleFullscreen', 'logout']),
+    ...mapActions(['toggleSideBar', 'toggleFullscreen', 'logout', 'setMenuNavigation', 'setThemeStyle', 'setThemeColor', 'setGrayMode', 'setShowWatermark']),
     handleClickOutside(event) {
       if (!this.$el.querySelector('.search-container').contains(event.target)) {
         this.showSearchResults = false
@@ -179,7 +265,98 @@ export default {
         }).catch(() => {})
       } else if (command === 'profile') {
         this.$message.info('个人中心功能开发中')
+      } else if (command === 'settings') {
+        this.openSettingsDrawer()
       }
+    },
+    openSettingsDrawer() {
+      this.localSettings = {
+        menuNavigation: this.menuNavigation,
+        themeStyle: this.themeStyle,
+        themeColor: this.themeColor,
+        grayMode: this.grayMode,
+        showWatermark: this.showWatermark
+      }
+      this.settingsDrawerVisible = true
+    },
+    handleCloseSettings(done) {
+      done()
+    },
+    handleMenuNavigationChange(value) {
+      this.setMenuNavigation(value)
+      this.$message.success('菜单导航方式已更新')
+    },
+    handleThemeStyleChange(value) {
+      this.setThemeStyle(value)
+      this.applyThemeStyle(value)
+      this.$message.success('主题风格已更新')
+    },
+    handleThemeColorChange(value) {
+      this.localSettings.themeColor = value
+      this.setThemeColor(value)
+      this.applyThemeColor(value)
+      this.$message.success('主题颜色已更新')
+    },
+    handleGrayModeChange(value) {
+      this.setGrayMode(value)
+      this.applyGrayMode(value)
+      this.$message.success(value ? '灰色模式已开启' : '灰色模式已关闭')
+    },
+    handleShowWatermarkChange(value) {
+      this.setShowWatermark(value)
+      this.applyWatermark(value)
+      this.$message.success(value ? '水印已开启' : '水印已关闭')
+    },
+    applyThemeStyle(style) {
+      const body = document.body
+      if (style === 'dark') {
+        body.classList.add('dark-theme')
+      } else {
+        body.classList.remove('dark-theme')
+      }
+    },
+    applyThemeColor(color) {
+      document.documentElement.style.setProperty('--theme-color', color)
+    },
+    applyGrayMode(enabled) {
+      const html = document.documentElement
+      if (enabled) {
+        html.style.filter = 'grayscale(100%)'
+        html.style.webkitFilter = 'grayscale(100%)'
+      } else {
+        html.style.filter = ''
+        html.style.webkitFilter = ''
+      }
+    },
+    applyWatermark(enabled) {
+      let watermarkElement = document.getElementById('watermark')
+      if (enabled) {
+        if (!watermarkElement) {
+          watermarkElement = document.createElement('div')
+          watermarkElement.id = 'watermark'
+          watermarkElement.className = 'watermark-container'
+          document.body.appendChild(watermarkElement)
+        }
+        this.generateWatermark(watermarkElement)
+      } else {
+        if (watermarkElement) {
+          watermarkElement.remove()
+        }
+      }
+    },
+    generateWatermark(container) {
+      const canvas = document.createElement('canvas')
+      canvas.width = 200
+      canvas.height = 150
+      const ctx = canvas.getContext('2d')
+      ctx.rotate(-20 * Math.PI / 180)
+      ctx.font = '16px Arial'
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.08)'
+      ctx.fillText(this.userInfo.username || '用户', 30, 100)
+      ctx.fillText(new Date().toLocaleDateString(), 30, 130)
+      const watermarkUrl = canvas.toDataURL('image/png')
+      container.style.backgroundImage = `url(${watermarkUrl})`
+      container.style.backgroundRepeat = 'repeat'
     }
   }
 }
@@ -232,5 +409,75 @@ export default {
 .search-result-item i {
   margin-right: 8px;
   color: #606266;
+}
+
+.settings-container {
+  padding: 20px 0;
+}
+
+.setting-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.setting-label {
+  font-size: 14px;
+  color: #606266;
+}
+
+.color-picker-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.color-item {
+  width: 30px;
+  height: 30px;
+  border-radius: 4px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+.color-item:hover {
+  transform: scale(1.1);
+}
+
+.color-item.active {
+  border-color: #303133;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+}
+</style>
+
+<style>
+.watermark-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+.dark-theme {
+  background-color: #1a1a2e;
+  color: #e0e0e0;
+}
+
+.dark-theme .el-header {
+  background-color: #16213e !important;
+}
+
+.dark-theme .el-aside {
+  background-color: #0f0f23 !important;
+}
+
+.dark-theme .el-menu {
+  background-color: #0f0f23 !important;
 }
 </style>
