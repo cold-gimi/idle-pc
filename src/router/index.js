@@ -20,19 +20,25 @@ const routes = [
         path: 'dashboard',
         name: 'Dashboard',
         component: () => import('@/views/Dashboard/index.vue'),
-        meta: { title: '首页', icon: 'el-icon-s-home' }
+        meta: { title: '首页', icon: 'el-icon-s-home', roles: ['admin', 'user'] }
       },
       {
         path: 'article',
         name: 'Article',
         component: () => import('@/views/Article/index.vue'),
-        meta: { title: '文章管理', icon: 'el-icon-document' }
+        meta: { title: '文章管理', icon: 'el-icon-document', roles: ['admin', 'user'] }
       },
       {
         path: 'audit',
         name: 'Audit',
         component: () => import('@/views/Audit/index.vue'),
-        meta: { title: '审核管理', icon: 'el-icon-check' }
+        meta: { title: '审核管理', icon: 'el-icon-check', roles: ['admin'] }
+      },
+      {
+        path: 'product',
+        name: 'Product',
+        component: () => import('@/views/Product/index.vue'),
+        meta: { title: '商品列表', icon: 'el-icon-goods', roles: ['admin'] }
       }
     ]
   }
@@ -48,6 +54,7 @@ router.beforeEach((to, from, next) => {
   document.title = to.meta.title || '二手闲置管理端'
   
   const token = store.getters.token
+  const userRole = store.getters.userRole
   
   if (to.path === '/login') {
     if (token) {
@@ -57,7 +64,13 @@ router.beforeEach((to, from, next) => {
     }
   } else {
     if (token) {
-      next()
+      const requiredRoles = to.meta.roles
+      if (requiredRoles && !requiredRoles.includes(userRole)) {
+        Vue.prototype.$message.error('您没有权限访问该页面')
+        next({ path: '/dashboard' })
+      } else {
+        next()
+      }
     } else {
       next({ path: '/login' })
     }

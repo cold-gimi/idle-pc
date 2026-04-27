@@ -3,6 +3,37 @@ import Vuex from 'vuex'
 
 Vue.use(Vuex)
 
+const allMenuList = [
+  {
+    id: 1,
+    name: '首页',
+    path: '/dashboard',
+    icon: 'el-icon-s-home',
+    roles: ['admin', 'user']
+  },
+  {
+    id: 2,
+    name: '文章管理',
+    path: '/article',
+    icon: 'el-icon-document',
+    roles: ['admin', 'user']
+  },
+  {
+    id: 3,
+    name: '审核管理',
+    path: '/audit',
+    icon: 'el-icon-check',
+    roles: ['admin']
+  },
+  {
+    id: 4,
+    name: '商品列表',
+    path: '/product',
+    icon: 'el-icon-goods',
+    roles: ['admin']
+  }
+]
+
 export default new Vuex.Store({
   state: {
     token: localStorage.getItem('token') || '',
@@ -11,34 +42,23 @@ export default new Vuex.Store({
     sidebar: {
       opened: localStorage.getItem('sidebarStatus') ? !!+localStorage.getItem('sidebarStatus') : true,
       withoutAnimation: false
-    },
-    menuList: [
-      {
-        id: 1,
-        name: '首页',
-        path: '/dashboard',
-        icon: 'el-icon-s-home'
-      },
-      {
-        id: 2,
-        name: '文章管理',
-        path: '/article',
-        icon: 'el-icon-document'
-      },
-      {
-        id: 3,
-        name: '审核管理',
-        path: '/audit',
-        icon: 'el-icon-check'
-      }
-    ]
+    }
   },
   getters: {
     token: state => state.token,
     userInfo: state => state.userInfo,
     isFullscreen: state => state.isFullscreen,
     sidebar: state => state.sidebar,
-    menuList: state => state.menuList
+    menuList: state => {
+      const userRole = state.userInfo.role || 'user'
+      return allMenuList.filter(menu => menu.roles.includes(userRole))
+    },
+    isAdmin: state => {
+      return state.userInfo.role === 'admin'
+    },
+    userRole: state => {
+      return state.userInfo.role || 'user'
+    }
   },
   mutations: {
     SET_TOKEN: (state, token) => {
@@ -77,9 +97,16 @@ export default new Vuex.Store({
     login({ commit }, userInfo) {
       return new Promise((resolve, reject) => {
         setTimeout(() => {
+          localStorage.removeItem('token')
+          localStorage.removeItem('userInfo')
           const token = 'mock-token-' + Date.now()
+          const role = userInfo.username === 'admin' ? 'admin' : 'user'
+          const userInfoWithRole = {
+            ...userInfo,
+            role
+          }
           commit('SET_TOKEN', token)
-          commit('SET_USER_INFO', userInfo)
+          commit('SET_USER_INFO', userInfoWithRole)
           resolve()
         }, 500)
       })
