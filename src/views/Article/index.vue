@@ -2,7 +2,10 @@
   <div class="page-container">
     <div class="page-header">
       <h3 class="page-title">文章管理</h3>
-      <el-button type="primary" icon="el-icon-plus" @click="handleAdd">新增文章</el-button>
+      <div class="header-buttons">
+        <el-button type="primary" icon="el-icon-plus" @click="handleAdd">新增文章</el-button>
+        <el-button type="success" icon="el-icon-plus" @click="handleAddCategory">新增分类</el-button>
+      </div>
     </div>
 
     <div class="filter-container">
@@ -145,6 +148,18 @@
         <el-button @click="detailVisible = false">关闭</el-button>
       </div>
     </el-dialog>
+
+    <el-dialog title="新增分类" :visible.sync="categoryDialogVisible" width="400px">
+      <el-form :model="categoryForm" :rules="categoryRules" ref="categoryForm" label-width="80px">
+        <el-form-item label="分类名称" prop="name">
+          <el-input v-model="categoryForm.name" placeholder="请输入分类名称" />
+        </el-form-item>
+      </el-form>
+      <div slot="footer" class="dialog-footer">
+        <el-button @click="categoryDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitCategoryForm" :loading="categorySubmitLoading">确定</el-button>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -199,6 +214,17 @@ export default {
         ],
         price: [
           { required: true, message: '请输入价格', trigger: 'blur' }
+        ]
+      },
+      categoryDialogVisible: false,
+      categorySubmitLoading: false,
+      categoryForm: {
+        name: ''
+      },
+      categoryRules: {
+        name: [
+          { required: true, message: '请输入分类名称', trigger: 'blur' },
+          { min: 1, max: 20, message: '分类名称长度在 1 到 20 个字符', trigger: 'blur' }
         ]
       }
     }
@@ -347,6 +373,33 @@ export default {
           }, 500)
         }
       })
+    },
+    handleAddCategory() {
+      this.categoryForm = {
+        name: ''
+      }
+      this.$nextTick(() => {
+        this.$refs.categoryForm && this.$refs.categoryForm.resetFields()
+      })
+      this.categoryDialogVisible = true
+    },
+    submitCategoryForm() {
+      this.$refs.categoryForm.validate(valid => {
+        if (valid) {
+          const categoryName = this.categoryForm.name.trim()
+          if (this.categoryList.includes(categoryName)) {
+            this.$message.error('该分类已存在')
+            return
+          }
+          this.categorySubmitLoading = true
+          setTimeout(() => {
+            this.categoryList.push(categoryName)
+            this.$message.success('新增分类成功')
+            this.categoryDialogVisible = false
+            this.categorySubmitLoading = false
+          }, 500)
+        }
+      })
     }
   }
 }
@@ -355,5 +408,9 @@ export default {
 <style scoped>
 .text-red {
   color: #f56c6c;
+}
+.header-buttons {
+  display: flex;
+  gap: 10px;
 }
 </style>
