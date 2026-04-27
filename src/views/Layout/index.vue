@@ -117,10 +117,9 @@ export default {
   },
   computed: {
     ...mapState({
-      sidebar: state => state.sidebar,
-      menuList: state => state.menuList
+      sidebar: state => state.sidebar
     }),
-    ...mapGetters(['userInfo']),
+    ...mapGetters(['userInfo', 'menuList']),
     sidebarWidth() {
       return this.sidebar.opened ? '210px' : '64px'
     },
