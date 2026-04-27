@@ -20,6 +20,18 @@
         </el-select>
       </div>
       <div class="filter-item">
+        <span class="filter-label">日期：</span>
+        <el-date-picker
+          v-model="dateRange"
+          type="daterange"
+          range-separator="至"
+          start-placeholder="开始日期"
+          end-placeholder="结束日期"
+          value-format="yyyy-MM-dd"
+          style="width: 240px;"
+        />
+      </div>
+      <div class="filter-item">
         <el-button type="primary" icon="el-icon-search" @click="handleQuery">搜索</el-button>
         <el-button icon="el-icon-refresh" @click="resetQuery">重置</el-button>
       </div>
@@ -74,13 +86,21 @@
           <el-input v-model="form.author" placeholder="请输入作者" />
         </el-form-item>
         <el-form-item label="分类" prop="category">
-          <el-select v-model="form.category" placeholder="请选择分类" style="width: 100%;">
-            <el-option label="电子产品" value="电子产品" />
-            <el-option label="家用电器" value="家用电器" />
-            <el-option label="手机数码" value="手机数码" />
-            <el-option label="服装鞋帽" value="服装鞋帽" />
-            <el-option label="图书文具" value="图书文具" />
-            <el-option label="其他" value="其他" />
+          <el-select
+            v-model="form.category"
+            placeholder="请选择分类"
+            style="width: 100%;"
+            filterable
+            allow-create
+            default-first-option
+            @change="handleCategoryChange"
+          >
+            <el-option
+              v-for="category in categoryList"
+              :key="category"
+              :label="category"
+              :value="category"
+            />
           </el-select>
         </el-form-item>
         <el-form-item label="价格" prop="price">
@@ -136,6 +156,7 @@ export default {
       loading: false,
       submitLoading: false,
       total: 0,
+      dateRange: [],
       queryParams: {
         pageNum: 1,
         pageSize: 10,
@@ -148,6 +169,14 @@ export default {
       isAdd: false,
       detailVisible: false,
       currentArticle: {},
+      categoryList: [
+        '电子产品',
+        '家用电器',
+        '手机数码',
+        '服装鞋帽',
+        '图书文具',
+        '其他'
+      ],
       form: {
         id: undefined,
         title: '',
@@ -201,6 +230,13 @@ export default {
         if (this.queryParams.status) {
           filtered = filtered.filter(item => item.status === this.queryParams.status)
         }
+        if (this.dateRange && this.dateRange.length === 2) {
+          const [startDate, endDate] = this.dateRange
+          filtered = filtered.filter(item => {
+            const itemDate = item.createTime.split(' ')[0]
+            return itemDate >= startDate && itemDate <= endDate
+          })
+        }
 
         const start = (this.queryParams.pageNum - 1) * this.queryParams.pageSize
         const end = start + this.queryParams.pageSize
@@ -233,6 +269,7 @@ export default {
       this.getList()
     },
     resetQuery() {
+      this.dateRange = []
       this.queryParams = {
         pageNum: 1,
         pageSize: 10,
@@ -240,6 +277,11 @@ export default {
         status: ''
       }
       this.getList()
+    },
+    handleCategoryChange(value) {
+      if (value && !this.categoryList.includes(value)) {
+        this.categoryList.push(value)
+      }
     },
     handleSizeChange(val) {
       this.queryParams.pageSize = val

@@ -8,14 +8,6 @@
           </span>
           <span v-else class="logo-text">二手闲置管理端</span>
         </div>
-        <div class="menu-search" v-show="sidebar.opened">
-          <el-input
-            v-model="searchKeyword"
-            placeholder="搜索菜单"
-            prefix-icon="el-icon-search"
-            clearable
-          />
-        </div>
         <el-menu
           :default-active="activeMenu"
           :collapse="!sidebar.opened"
@@ -27,7 +19,7 @@
           router
         >
           <el-menu-item
-            v-for="menu in filteredMenuList"
+            v-for="menu in menuList"
             :key="menu.id"
             :index="menu.path"
           >
@@ -54,13 +46,28 @@
             </div>
           </div>
           <div class="header-right">
-            <el-input
-              v-model="headerSearchKeyword"
-              placeholder="全局搜索"
-              prefix-icon="el-icon-search"
-              class="search-input"
-              clearable
-            />
+            <div class="search-container">
+              <el-input
+                v-model="headerSearchKeyword"
+                placeholder="搜索菜单"
+                prefix-icon="el-icon-search"
+                class="search-input"
+                clearable
+                @focus="showSearchResults = true"
+                @input="handleMenuSearch"
+              />
+              <div v-if="showSearchResults && filteredMenuList.length > 0" class="search-results">
+                <div
+                  v-for="menu in filteredMenuList"
+                  :key="menu.id"
+                  class="search-result-item"
+                  @click="navigateToMenu(menu)"
+                >
+                  <i :class="menu.icon"></i>
+                  <span>{{ menu.name }}</span>
+                </div>
+              </div>
+            </div>
             <i
               :class="isFullscreen ? 'el-icon-zoom-out' : 'el-icon-zoom-in'"
               @click="toggleFullscreen"
@@ -102,9 +109,10 @@ export default {
   name: 'Layout',
   data() {
     return {
-      searchKeyword: '',
       headerSearchKeyword: '',
-      isFullscreen: false
+      isFullscreen: false,
+      showSearchResults: false,
+      filteredMenuList: []
     }
   },
   computed: {
@@ -126,26 +134,38 @@ export default {
     },
     currentRoute() {
       return this.$route
-    },
-    filteredMenuList() {
-      if (!this.searchKeyword) {
-        return this.menuList
-      }
-      const keyword = this.searchKeyword.toLowerCase()
-      return this.menuList.filter(menu =>
-        menu.name.toLowerCase().includes(keyword)
-      )
     }
   },
-  watch: {
-    searchKeyword(val) {
-      if (val && this.filteredMenuList.length === 1) {
-        // 自动高亮唯一匹配的菜单
-      }
-    }
+  mounted() {
+    document.addEventListener('click', this.handleClickOutside)
+  },
+  beforeDestroy() {
+    document.removeEventListener('click', this.handleClickOutside)
   },
   methods: {
     ...mapActions(['toggleSideBar', 'toggleFullscreen', 'logout']),
+    handleClickOutside(event) {
+      if (!this.$el.querySelector('.search-container').contains(event.target)) {
+        this.showSearchResults = false
+      }
+    },
+    handleMenuSearch() {
+      if (!this.headerSearchKeyword) {
+        this.filteredMenuList = []
+        this.showSearchResults = false
+        return
+      }
+      const keyword = this.headerSearchKeyword.toLowerCase()
+      this.filteredMenuList = this.menuList.filter(menu =>
+        menu.name.toLowerCase().includes(keyword)
+      )
+      this.showSearchResults = true
+    },
+    navigateToMenu(menu) {
+      this.showSearchResults = false
+      this.headerSearchKeyword = ''
+      this.$router.push(menu.path)
+    },
     handleCommand(command) {
       if (command === 'logout') {
         this.$confirm('确定要退出登录吗?', '提示', {
@@ -176,5 +196,42 @@ export default {
 
 .toggle-sidebar:hover {
   color: #409EFF;
+}
+
+.search-container {
+  position: relative;
+  display: inline-block;
+}
+
+.search-results {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  margin-top: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.search-result-item {
+  display: flex;
+  align-items: center;
+  padding: 10px 15px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.search-result-item:hover {
+  background-color: #f5f7fa;
+}
+
+.search-result-item i {
+  margin-right: 8px;
+  color: #606266;
 }
 </style>

@@ -4,18 +4,19 @@
       <h3 class="page-title">审核管理</h3>
     </div>
 
+    <div class="tab-container">
+      <el-tabs v-model="activeTab" @tab-click="handleTabClick">
+        <el-tab-pane label="待审核" name="pending"></el-tab-pane>
+        <el-tab-pane label="已拒绝" name="rejected"></el-tab-pane>
+        <el-tab-pane label="已通过" name="approved"></el-tab-pane>
+        <el-tab-pane label="全部" name="all"></el-tab-pane>
+      </el-tabs>
+    </div>
+
     <div class="filter-container">
       <div class="filter-item">
         <span class="filter-label">标题：</span>
         <el-input v-model="queryParams.title" placeholder="请输入标题" clearable style="width: 200px;" @keyup.enter.native="handleQuery" />
-      </div>
-      <div class="filter-item">
-        <span class="filter-label">状态：</span>
-        <el-select v-model="queryParams.status" placeholder="请选择状态" clearable style="width: 150px;">
-          <el-option label="待审核" value="pending" />
-          <el-option label="已通过" value="approved" />
-          <el-option label="已拒绝" value="rejected" />
-        </el-select>
       </div>
       <div class="filter-item">
         <span class="filter-label">类型：</span>
@@ -27,6 +28,18 @@
           <el-option label="图书文具" value="图书文具" />
           <el-option label="其他" value="其他" />
         </el-select>
+      </div>
+      <div class="filter-item">
+        <span class="filter-label">日期：</span>
+        <el-date-picker
+          v-model="dateRange"
+          type="daterange"
+          range-separator="至"
+          start-placeholder="开始日期"
+          end-placeholder="结束日期"
+          value-format="yyyy-MM-dd"
+          style="width: 240px;"
+        />
       </div>
       <div class="filter-item">
         <el-button type="primary" icon="el-icon-search" @click="handleQuery">搜索</el-button>
@@ -167,6 +180,8 @@ export default {
       loading: false,
       submitLoading: false,
       total: 0,
+      activeTab: 'pending',
+      dateRange: [],
       queryParams: {
         pageNum: 1,
         pageSize: 10,
@@ -214,9 +229,20 @@ export default {
     }
   },
   created() {
+    this.queryParams.status = 'pending'
     this.getList()
   },
   methods: {
+    handleTabClick(tab) {
+      this.activeTab = tab.name
+      if (tab.name === 'all') {
+        this.queryParams.status = ''
+      } else {
+        this.queryParams.status = tab.name
+      }
+      this.queryParams.pageNum = 1
+      this.getList()
+    },
     getList() {
       this.loading = true
       setTimeout(() => {
@@ -242,6 +268,13 @@ export default {
         }
         if (this.queryParams.type) {
           filtered = filtered.filter(item => item.type === this.queryParams.type)
+        }
+        if (this.dateRange && this.dateRange.length === 2) {
+          const [startDate, endDate] = this.dateRange
+          filtered = filtered.filter(item => {
+            const itemDate = item.submitTime.split(' ')[0]
+            return itemDate >= startDate && itemDate <= endDate
+          })
         }
 
         const start = (this.queryParams.pageNum - 1) * this.queryParams.pageSize
@@ -273,11 +306,13 @@ export default {
       this.getList()
     },
     resetQuery() {
+      this.activeTab = 'pending'
+      this.dateRange = []
       this.queryParams = {
         pageNum: 1,
         pageSize: 10,
         title: '',
-        status: '',
+        status: 'pending',
         type: ''
       }
       this.getList()
