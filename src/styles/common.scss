@@ -217,7 +217,7 @@ body {
 }
 
 .el-menu-item.is-active {
-  background-color: #1890ff !important;
+  background-color: var(--theme-color, #409EFF) !important;
   color: #fff;
 }
 
@@ -230,5 +230,5 @@ body {
 }
 
 .el-submenu .el-menu-item.is-active {
-  background-color: #1890ff !important;
+  background-color: var(--theme-color, #409EFF) !important;
 }

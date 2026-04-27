@@ -1,6 +1,6 @@
 <template>
   <div class="layout-container" :class="['menu-' + localSettings.menuNavigation, 'theme-' + localSettings.themeStyle]">
-    <el-container v-if="localSettings.menuNavigation === 'sidebar'">
+    <el-container v-if="localSettings.menuNavigation === 'sidebar'" key="sidebar-layout">
       <el-aside :width="sidebarWidth" class="sidebar-aside">
         <div class="logo-container">
           <span v-if="!sidebar.opened" class="logo-text collapse-logo">
@@ -103,7 +103,7 @@
       </el-container>
     </el-container>
     
-    <el-container v-else-if="localSettings.menuNavigation === 'top'">
+    <el-container v-else-if="localSettings.menuNavigation === 'top'" key="top-layout">
       <el-header class="top-nav-header">
         <div class="top-nav-left">
           <div class="logo-container-top">
@@ -196,68 +196,144 @@
       title="布局设置"
       :visible.sync="settingsDrawerVisible"
       :before-close="handleCloseSettings"
-      size="360px"
+      size="380px"
+      :custom-class="settingsDrawerClass"
     >
       <div class="settings-container">
-        <div class="settings-section">
-          <h3 class="section-title">菜单导航</h3>
-          <div class="setting-item">
-            <span class="setting-label">菜单导航方式</span>
-            <el-radio-group v-model="localSettings.menuNavigation" @change="handleMenuNavigationChange">
-              <el-radio label="sidebar">侧边栏</el-radio>
-              <el-radio label="top">顶部</el-radio>
-            </el-radio-group>
+        <div class="settings-card">
+          <div class="card-header">
+            <i class="el-icon-menu card-icon"></i>
+            <h3 class="section-title">菜单导航</h3>
           </div>
-        </div>
-        
-        <div class="settings-section">
-          <h3 class="section-title">主题风格</h3>
-          <div class="setting-item">
-            <span class="setting-label">主题风格</span>
-            <el-radio-group v-model="localSettings.themeStyle" @change="handleThemeStyleChange">
-              <el-radio label="light">浅色</el-radio>
-              <el-radio label="dark">深色</el-radio>
-            </el-radio-group>
-          </div>
-        </div>
-        
-        <div class="settings-section">
-          <h3 class="section-title">主题颜色</h3>
-          <div class="setting-item">
-            <span class="setting-label">主题颜色</span>
-            <div class="color-picker-container">
-              <div
-                v-for="color in themeColors"
-                :key="color.value"
-                class="color-item"
-                :class="{ active: localSettings.themeColor === color.value }"
-                :style="{ backgroundColor: color.value }"
-                @click="handleThemeColorChange(color.value)"
-                :title="color.name"
-              ></div>
+          <div class="card-content">
+            <div class="setting-item">
+              <span class="setting-label">菜单导航方式</span>
+              <div class="navigation-options">
+                <div
+                  class="nav-option"
+                  :class="{ active: localSettings.menuNavigation === 'sidebar' }"
+                  @click="localSettings.menuNavigation = 'sidebar'; handleMenuNavigationChange('sidebar')"
+                >
+                  <div class="nav-preview sidebar-preview">
+                    <div class="preview-sidebar"></div>
+                    <div class="preview-main"></div>
+                  </div>
+                  <span class="nav-label">侧边栏</span>
+                </div>
+                <div
+                  class="nav-option"
+                  :class="{ active: localSettings.menuNavigation === 'top' }"
+                  @click="localSettings.menuNavigation = 'top'; handleMenuNavigationChange('top')"
+                >
+                  <div class="nav-preview top-preview">
+                    <div class="preview-header"></div>
+                    <div class="preview-main"></div>
+                  </div>
+                  <span class="nav-label">顶部</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
         
-        <div class="settings-section">
-          <h3 class="section-title">其他设置</h3>
-          <div class="setting-item">
-            <span class="setting-label">灰色模式</span>
-            <el-switch
-              v-model="localSettings.grayMode"
-              active-text="开启"
-              inactive-text="关闭"
-              @change="handleGrayModeChange"
-            ></el-switch>
+        <div class="settings-card">
+          <div class="card-header">
+            <i class="el-icon-brush card-icon"></i>
+            <h3 class="section-title">主题风格</h3>
           </div>
-          <div class="setting-item">
-            <span class="setting-label">显示水印</span>
-            <el-switch
-              v-model="localSettings.showWatermark"
-              active-text="开启"
-              inactive-text="关闭"
-              @change="handleShowWatermarkChange"
-            ></el-switch>
+          <div class="card-content">
+            <div class="setting-item">
+              <span class="setting-label">主题风格</span>
+              <div class="theme-options">
+                <div
+                  class="theme-option"
+                  :class="{ active: localSettings.themeStyle === 'light' }"
+                  @click="localSettings.themeStyle = 'light'; handleThemeStyleChange('light')"
+                >
+                  <div class="theme-preview light-preview">
+                    <div class="preview-bar"></div>
+                    <div class="preview-body"></div>
+                  </div>
+                  <span class="theme-label">浅色</span>
+                </div>
+                <div
+                  class="theme-option"
+                  :class="{ active: localSettings.themeStyle === 'dark' }"
+                  @click="localSettings.themeStyle = 'dark'; handleThemeStyleChange('dark')"
+                >
+                  <div class="theme-preview dark-preview">
+                    <div class="preview-bar"></div>
+                    <div class="preview-body"></div>
+                  </div>
+                  <span class="theme-label">深色</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="settings-card">
+          <div class="card-header">
+            <i class="el-icon-collection card-icon"></i>
+            <h3 class="section-title">主题颜色</h3>
+          </div>
+          <div class="card-content">
+            <div class="setting-item">
+              <span class="setting-label">主题颜色</span>
+              <div class="color-picker-container">
+                <div
+                  v-for="color in themeColors"
+                  :key="color.value"
+                  class="color-item-wrapper"
+                  @click="handleThemeColorChange(color.value)"
+                  :title="color.name"
+                >
+                  <div
+                    class="color-item"
+                    :class="{ active: localSettings.themeColor === color.value }"
+                    :style="{ backgroundColor: color.value }"
+                  >
+                    <i v-if="localSettings.themeColor === color.value" class="el-icon-check check-icon"></i>
+                  </div>
+                  <span class="color-name">{{ color.name }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="settings-card">
+          <div class="card-header">
+            <i class="el-icon-setting card-icon"></i>
+            <h3 class="section-title">其他设置</h3>
+          </div>
+          <div class="card-content">
+            <div class="setting-item-row">
+              <div class="setting-info">
+                <i class="el-icon-s-grid setting-icon"></i>
+                <div class="setting-text">
+                  <span class="setting-label">灰色模式</span>
+                  <span class="setting-desc">以灰色调显示页面</span>
+                </div>
+              </div>
+              <el-switch
+                v-model="localSettings.grayMode"
+                @change="handleGrayModeChange"
+              ></el-switch>
+            </div>
+            <div class="setting-item-row">
+              <div class="setting-info">
+                <i class="el-icon-tickets setting-icon"></i>
+                <div class="setting-text">
+                  <span class="setting-label">显示水印</span>
+                  <span class="setting-desc">页面显示用户水印</span>
+                </div>
+              </div>
+              <el-switch
+                v-model="localSettings.showWatermark"
+                @change="handleShowWatermarkChange"
+              ></el-switch>
+            </div>
           </div>
         </div>
       </div>
@@ -333,6 +409,9 @@ export default {
     },
     headerActiveColor() {
       return this.localSettings.themeColor
+    },
+    settingsDrawerClass() {
+      return `settings-drawer ${this.localSettings.themeStyle === 'dark' ? 'theme-dark' : 'theme-light'}`
     }
   },
   created() {
@@ -601,58 +680,332 @@ export default {
 }
 
 .settings-container {
-  padding: 20px 0;
+  padding: 10px 5px;
 }
 
-.settings-section {
-  margin-bottom: 25px;
+.settings-card {
+  background: #fff;
+  border-radius: 12px;
+  margin-bottom: 16px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.settings-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, rgba(64, 158, 255, 0.05) 0%, rgba(102, 126, 234, 0.05) 100%);
+  border-bottom: 1px solid #f0f2f5;
+}
+
+.card-icon {
+  font-size: 20px;
+  color: var(--theme-color, #409EFF);
+  margin-right: 12px;
 }
 
 .section-title {
   font-size: 15px;
   font-weight: 600;
   color: #303133;
-  margin-bottom: 15px;
-  padding-bottom: 8px;
-  border-bottom: 2px solid var(--theme-color, #409EFF);
-  display: inline-block;
+  margin: 0;
+}
+
+.card-content {
+  padding: 16px 20px;
 }
 
 .setting-item {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 0;
-  margin-left: 10px;
+  flex-direction: column;
 }
 
 .setting-label {
   font-size: 14px;
   color: #606266;
+  margin-bottom: 12px;
+}
+
+.navigation-options {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.nav-option {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px;
+  border: 2px solid #e4e7ed;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: #fff;
+}
+
+.nav-option:hover {
+  border-color: #c0c4cc;
+  background: #fafafa;
+}
+
+.nav-option.active {
+  border-color: var(--theme-color, #409EFF);
+  background: rgba(64, 158, 255, 0.05);
+  box-shadow: 0 0 0 3px rgba(64, 158, 255, 0.1);
+}
+
+.nav-preview {
+  width: 80px;
+  height: 60px;
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  border: 1px solid #dcdfe6;
+  background: #f5f7fa;
+}
+
+.sidebar-preview {
+  flex-direction: row;
+}
+
+.sidebar-preview .preview-sidebar {
+  width: 20px;
+  background: #304156;
+}
+
+.sidebar-preview .preview-main {
+  flex: 1;
+  background: #f0f2f5;
+}
+
+.top-preview {
+  flex-direction: column;
+}
+
+.top-preview .preview-header {
+  height: 12px;
+  background: #fff;
+  border-bottom: 1px solid #e4e7ed;
+}
+
+.top-preview .preview-main {
+  flex: 1;
+  background: #f0f2f5;
+}
+
+.nav-label {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #606266;
+}
+
+.nav-option.active .nav-label {
+  color: var(--theme-color, #409EFF);
+  font-weight: 500;
+}
+
+.theme-options {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.theme-option {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px;
+  border: 2px solid #e4e7ed;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: #fff;
+}
+
+.theme-option:hover {
+  border-color: #c0c4cc;
+  background: #fafafa;
+}
+
+.theme-option.active {
+  border-color: var(--theme-color, #409EFF);
+  background: rgba(64, 158, 255, 0.05);
+  box-shadow: 0 0 0 3px rgba(64, 158, 255, 0.1);
+}
+
+.theme-preview {
+  width: 80px;
+  height: 60px;
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #dcdfe6;
+}
+
+.light-preview {
+  background: #fff;
+}
+
+.light-preview .preview-bar {
+  height: 12px;
+  background: #fff;
+  border-bottom: 1px solid #e4e7ed;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.light-preview .preview-body {
+  flex: 1;
+  background: #f0f2f5;
+}
+
+.dark-preview {
+  background: #1a1a2e;
+}
+
+.dark-preview .preview-bar {
+  height: 12px;
+  background: #16213e;
+  border-bottom: 1px solid #2a3a5a;
+}
+
+.dark-preview .preview-body {
+  flex: 1;
+  background: #0f0f23;
+}
+
+.theme-label {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #606266;
+}
+
+.theme-option.active .theme-label {
+  color: var(--theme-color, #409EFF);
+  font-weight: 500;
 }
 
 .color-picker-container {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 12px;
+}
+
+.color-item-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.color-item-wrapper:hover {
+  transform: translateY(-2px);
 }
 
 .color-item {
-  width: 30px;
-  height: 30px;
-  border-radius: 4px;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
   cursor: pointer;
   border: 2px solid transparent;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
 .color-item:hover {
   transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .color-item.active {
   border-color: #303133;
-  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.1);
+}
+
+.check-icon {
+  color: #fff;
+  font-size: 16px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.color-name {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #909399;
+}
+
+.color-item-wrapper:hover .color-name {
+  color: #606266;
+}
+
+.setting-item-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 0;
+  border-bottom: 1px solid #f0f2f5;
+}
+
+.setting-item-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.setting-info {
+  display: flex;
+  align-items: center;
+}
+
+.setting-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(64, 158, 255, 0.1) 0%, rgba(102, 126, 234, 0.1) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--theme-color, #409EFF);
+  font-size: 18px;
+  margin-right: 12px;
+}
+
+.setting-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.setting-desc {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 2px;
+}
+
+.settings-drawer .el-drawer__header {
+  margin-bottom: 16px;
+  padding: 20px 20px 0;
+}
+
+.settings-drawer .el-drawer__body {
+  padding: 0 20px 20px;
+}
+
+.settings-drawer .el-drawer__header span {
+  font-size: 18px;
+  font-weight: 600;
+  color: #303133;
 }
 </style>
 
@@ -711,11 +1064,90 @@ export default {
   color: #e0e0e0;
 }
 
-.el-menu-item.is-active {
-  color: var(--theme-color) !important;
+.settings-drawer.theme-dark {
+  background-color: #1a1a2e;
+}
+
+.settings-drawer.theme-dark .el-drawer__header span {
+  color: #e0e0e0;
+}
+
+.settings-drawer.theme-dark .settings-card {
+  background: #16213e;
+  border: 1px solid #2a3a5a;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.settings-drawer.theme-dark .settings-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.settings-drawer.theme-dark .card-header {
+  background: linear-gradient(135deg, rgba(64, 158, 255, 0.1) 0%, rgba(102, 126, 234, 0.1) 100%);
+  border-bottom: 1px solid #2a3a5a;
+}
+
+.settings-drawer.theme-dark .section-title {
+  color: #e0e0e0;
+}
+
+.settings-drawer.theme-dark .setting-label {
+  color: #a0a0a0;
+}
+
+.settings-drawer.theme-dark .nav-option {
+  background: #1a1a2e;
+  border-color: #2a3a5a;
+}
+
+.settings-drawer.theme-dark .nav-option:hover {
+  border-color: #3a4a6a;
+  background: #1e1e3a;
+}
+
+.settings-drawer.theme-dark .nav-option.active {
+  border-color: var(--theme-color, #409EFF);
+  background: rgba(64, 158, 255, 0.1);
+}
+
+.settings-drawer.theme-dark .theme-option {
+  background: #1a1a2e;
+  border-color: #2a3a5a;
+}
+
+.settings-drawer.theme-dark .theme-option:hover {
+  border-color: #3a4a6a;
+  background: #1e1e3a;
+}
+
+.settings-drawer.theme-dark .theme-option.active {
+  border-color: var(--theme-color, #409EFF);
+  background: rgba(64, 158, 255, 0.1);
+}
+
+.settings-drawer.theme-dark .setting-item-row {
+  border-bottom: 1px solid #2a3a5a;
+}
+
+.settings-drawer.theme-dark .setting-icon {
+  background: linear-gradient(135deg, rgba(64, 158, 255, 0.15) 0%, rgba(102, 126, 234, 0.15) 100%);
+}
+
+.settings-drawer.theme-dark .setting-desc {
+  color: #707070;
+}
+
+.settings-drawer.theme-dark .color-name {
+  color: #707070;
+}
+
+.settings-drawer.theme-dark .color-item-wrapper:hover .color-name {
+  color: #a0a0a0;
 }
 
 .el-menu--horizontal > .el-menu-item.is-active {
+  background-color: transparent !important;
+  color: var(--theme-color) !important;
   border-bottom: 2px solid var(--theme-color) !important;
 }
 
