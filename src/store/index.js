@@ -1,6 +1,6 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
-import request from '@/utils/request'
+import { auth } from '@/api'
 
 Vue.use(Vuex)
 
@@ -159,7 +159,7 @@ export default new Vuex.Store({
   actions: {
     login({ commit }, userInfo) {
       return new Promise((resolve, reject) => {
-        request.post('/auth/login', {
+        auth.login({
           username: userInfo.username,
           password: userInfo.password
         })

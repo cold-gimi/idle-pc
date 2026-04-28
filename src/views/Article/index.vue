@@ -189,7 +189,7 @@
 </template>
 
 <script>
-import request from '@/utils/request'
+import { article } from '@/api'
 
 export default {
   name: 'Article',
@@ -288,22 +288,24 @@ export default {
           params.startDate = this.dateRange[0]
           params.endDate = this.dateRange[1]
         }
-        const res = await request.get('/articles', { params })
+        const res = await article.getArticleList(params)
         this.articleList = res.data?.list || res.data?.items || []
         this.total = res.data?.pagination?.total || res.data?.total || 0
       } catch (error) {
         console.error('获取文章列表失败', error)
+        this.$message.error('获取文章列表失败')
       } finally {
         this.loading = false
       }
     },
     async getCategoryList() {
       try {
-        const res = await request.get('/articles/categories')
-        this.categoryList = res.data || []
+        const res = await article.getCategoryList()
+        this.categoryList = res.data.list || []
       } catch (error) {
         console.error('获取分类列表失败', error)
         this.categoryList = []
+        this.$message.error('获取分类列表失败')
       }
     },
     getStatusText(status) {
@@ -383,7 +385,7 @@ export default {
     },
     async handleViewArticle(row) {
       try {
-        const res = await request.get(`/articles/${row.id}`)
+        const res = await article.getArticleDetail(row.id)
         this.currentArticle = res.data || {}
         if (!this.currentArticle.categoryName && this.currentArticle.categoryId) {
           const category = this.categoryList.find(c => c.id === this.currentArticle.categoryId)
@@ -394,6 +396,7 @@ export default {
         this.articleDetailVisible = true
       } catch (error) {
         console.error('获取文章详情失败', error)
+        this.$message.error('获取文章详情失败')
       }
     },
     async handleDeleteArticle(row) {
@@ -403,12 +406,13 @@ export default {
           cancelButtonText: '取消',
           type: 'warning'
         })
-        await request.delete(`/articles/${row.id}`)
+        await article.deleteArticle(row.id)
         this.$message.success('删除成功')
         this.getArticleList()
       } catch (error) {
         if (error !== 'cancel') {
           console.error('删除文章失败', error)
+          this.$message.error('删除文章失败')
         }
       }
     },
@@ -418,16 +422,17 @@ export default {
           this.articleSubmitLoading = true
           try {
             if (this.isAddArticle) {
-              await request.post('/articles', this.articleForm)
+              await article.createArticle(this.articleForm)
               this.$message.success('新增成功')
             } else {
-              await request.put(`/articles/${this.articleForm.id}`, this.articleForm)
+              await article.updateArticle(this.articleForm.id, this.articleForm)
               this.$message.success('修改成功')
             }
             this.articleDialogVisible = false
             this.getArticleList()
           } catch (error) {
             console.error('提交失败', error)
+            this.$message.error(this.isAddArticle ? '新增失败' : '修改失败')
           } finally {
             this.articleSubmitLoading = false
           }
@@ -469,13 +474,14 @@ export default {
           cancelButtonText: '取消',
           type: 'warning'
         })
-        await request.delete(`/articles/categories/${row.id}`)
+        await article.deleteCategory(row.id)
         this.$message.success('删除成功')
         this.getCategoryList()
         this.getArticleList()
       } catch (error) {
         if (error !== 'cancel') {
           console.error('删除分类失败', error)
+          this.$message.error('删除分类失败')
         }
       }
     },
@@ -493,16 +499,17 @@ export default {
           this.categorySubmitLoading = true
           try {
             if (this.isAddCategory) {
-              await request.post('/articles/categories', { name: categoryName })
+              await article.createCategory({ name: categoryName })
               this.$message.success('新增分类成功')
             } else {
-              await request.put(`/articles/categories/${this.categoryForm.id}`, { name: categoryName })
+              await article.updateCategory(this.categoryForm.id, { name: categoryName })
               this.$message.success('修改分类成功')
             }
             this.categoryDialogVisible = false
             this.getCategoryList()
           } catch (error) {
             console.error('提交分类失败', error)
+            this.$message.error(this.isAddCategory ? '新增分类失败' : '修改分类失败')
           } finally {
             this.categorySubmitLoading = false
           }
