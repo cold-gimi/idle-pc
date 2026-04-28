@@ -10,7 +10,7 @@
     <div class="filter-container">
       <div class="filter-item">
         <span class="filter-label">商品名称：</span>
-        <el-input v-model="queryParams.name" placeholder="请输入商品名称" clearable style="width: 200px;" @keyup.enter.native="handleQuery" />
+        <el-input v-model="queryParams.title" placeholder="请输入商品名称" clearable style="width: 200px;" @keyup.enter.native="handleQuery" />
       </div>
       <div class="filter-item">
         <span class="filter-label">分类：</span>
@@ -64,7 +64,7 @@
             <span v-else class="no-image">无图</span>
           </template>
         </el-table-column>
-        <el-table-column prop="name" label="商品名称" min-width="200" />
+        <el-table-column prop="title" label="商品名称" min-width="200" />
         <el-table-column prop="category" label="分类" width="100" />
         <el-table-column prop="condition" label="成色" width="100">
           <template slot-scope="scope">
@@ -78,9 +78,9 @@
             ¥{{ scope.row.price }}
           </template>
         </el-table-column>
-        <el-table-column prop="tradeMethod" label="交易方式" width="100">
+        <el-table-column prop="tradeType" label="交易方式" width="100">
           <template slot-scope="scope">
-            {{ getTradeMethodText(scope.row.tradeMethod) }}
+            {{ getTradeTypeText(scope.row.tradeType) }}
           </template>
         </el-table-column>
         <el-table-column prop="location" label="位置" width="120" show-overflow-tooltip />
@@ -124,8 +124,8 @@
 
     <el-dialog :title="dialogTitle" :visible.sync="dialogVisible" width="800px" :close-on-click-modal="false">
       <el-form :model="form" :rules="rules" ref="form" label-width="100px">
-        <el-form-item label="商品名称" prop="name">
-          <el-input v-model="form.name" placeholder="请输入商品名称" />
+        <el-form-item label="商品名称" prop="title">
+          <el-input v-model="form.title" placeholder="请输入商品名称" />
         </el-form-item>
         <el-form-item label="分类" prop="category">
           <el-select
@@ -158,9 +158,13 @@
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="交易方式" prop="tradeMethod">
-          <el-radio-group v-model="form.tradeMethod">
-            <el-radio label="pickup">自提</el-radio>
+        <el-form-item label="交易方式" prop="tradeType">
+          <el-radio-group v-model="form.tradeType">
+            <el-radio
+              v-for="item in tradeTypeOptions"
+              :key="item.value"
+              :label="item.value"
+            >{{ item.label }}</el-radio>
           </el-radio-group>
         </el-form-item>
         <el-form-item label="位置" prop="location">
@@ -209,7 +213,7 @@
     <el-dialog title="商品详情" :visible.sync="detailVisible" width="700px">
       <el-descriptions :column="2" border>
         <el-descriptions-item label="ID">{{ currentProduct.id }}</el-descriptions-item>
-        <el-descriptions-item label="商品名称">{{ currentProduct.name }}</el-descriptions-item>
+        <el-descriptions-item label="商品名称">{{ currentProduct.title }}</el-descriptions-item>
         <el-descriptions-item label="分类">{{ currentProduct.category }}</el-descriptions-item>
         <el-descriptions-item label="价格">¥{{ currentProduct.price }}</el-descriptions-item>
         <el-descriptions-item label="成色">
@@ -217,7 +221,7 @@
             {{ getConditionText(currentProduct.condition) }}
           </el-tag>
         </el-descriptions-item>
-        <el-descriptions-item label="交易方式">{{ getTradeMethodText(currentProduct.tradeMethod) }}</el-descriptions-item>
+        <el-descriptions-item label="交易方式">{{ getTradeTypeText(currentProduct.tradeType) }}</el-descriptions-item>
         <el-descriptions-item label="位置">{{ currentProduct.location || '未填写' }}</el-descriptions-item>
         <el-descriptions-item label="状态">
           <el-tag :type="getStatusType(currentProduct.status)">{{ getStatusText(currentProduct.status) }}</el-tag>
@@ -245,7 +249,7 @@
 </template>
 
 <script>
-import { getProductList, createProduct, updateProduct, deleteProduct, toggleProductStatus, uploadImage } from '@/api/product'
+import { getProductList, createProduct, updateProduct, deleteProduct, publishProduct, unpublishProduct, uploadImage } from '@/api/product'
 
 export default {
   name: 'Product',
@@ -260,7 +264,7 @@ export default {
       queryParams: {
         pageNum: 1,
         pageSize: 10,
-        name: '',
+        title: '',
         category: '',
         condition: '',
         status: ''
@@ -285,10 +289,12 @@ export default {
         { label: '8成新', value: 'fair' },
         { label: '7成新及以下', value: 'poor' }
       ],
-      tradeMethodOptions: [
-        { label: '自提', value: 'pickup' }
+      tradeTypeOptions: [
+        { label: '自提', value: 'PICKUP' },
+        { label: '邮寄', value: 'DELIVERY' },
+        { label: '自提+邮寄', value: 'BOTH' }
       ],
-      uploadAction: 'http://localhost:3000/api/v1/upload',
+      uploadAction: 'http://localhost:3000/api/v1/products/upload',
       uploadHeaders: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       },
@@ -299,18 +305,18 @@ export default {
       currentProduct: {},
       form: {
         id: undefined,
-        name: '',
+        title: '',
         category: '',
         price: 0,
         condition: '',
-        tradeMethod: 'pickup',
+        tradeType: 'PICKUP',
         location: '',
         images: [],
         status: 'on',
         description: ''
       },
       rules: {
-        name: [
+        title: [
           { required: true, message: '请输入商品名称', trigger: 'blur' },
           { min: 2, max: 100, message: '商品名称长度在 2 到 100 个字符', trigger: 'blur' }
         ],
@@ -323,7 +329,7 @@ export default {
         condition: [
           { required: true, message: '请选择成色', trigger: 'change' }
         ],
-        tradeMethod: [
+        tradeType: [
           { required: true, message: '请选择交易方式', trigger: 'change' }
         ],
         location: [
@@ -384,13 +390,13 @@ export default {
       }
       return typeMap[condition] || 'info'
     },
-    getTradeMethodText(tradeMethod) {
-      const tradeMethodMap = {
-        pickup: '自提',
-        shipping: '邮寄',
-        both: '自提+邮寄'
+    getTradeTypeText(tradeType) {
+      const tradeTypeMap = {
+        PICKUP: '自提',
+        DELIVERY: '邮寄',
+        BOTH: '自提+邮寄'
       }
-      return tradeMethodMap[tradeMethod] || tradeMethod
+      return tradeTypeMap[tradeType] || tradeType
     },
     handleQuery() {
       if (this.searchLoading) return
@@ -404,7 +410,7 @@ export default {
       this.queryParams = {
         pageNum: 1,
         pageSize: 10,
-        name: '',
+        title: '',
         category: '',
         condition: '',
         status: ''
@@ -431,11 +437,11 @@ export default {
       this.dialogTitle = '新增商品'
       this.form = {
         id: undefined,
-        name: '',
+        title: '',
         category: '',
         price: 0,
         condition: '',
-        tradeMethod: 'pickup',
+        tradeType: 'PICKUP',
         location: '',
         images: [],
         status: 'on',
@@ -468,8 +474,8 @@ export default {
     async handleToggleStatus(row) {
       if (row._toggleLoading) return
       
-      const newStatus = row.status === 'on' ? 'off' : 'on'
-      const statusText = newStatus === 'on' ? '上架' : '下架'
+      const isPublish = row.status === 'off'
+      const statusText = isPublish ? '上架' : '下架'
       
       try {
         await this.$confirm(`是否确认${statusText}该商品?`, '提示', {
@@ -479,8 +485,12 @@ export default {
         })
         
         this.$set(row, '_toggleLoading', true)
-        await toggleProductStatus(row.id, newStatus)
-        row.status = newStatus
+        if (isPublish) {
+          await publishProduct(row.id)
+        } else {
+          await unpublishProduct(row.id)
+        }
+        row.status = isPublish ? 'on' : 'off'
         this.$message.success(`${statusText}成功`)
         this.getList()
       } catch (error) {

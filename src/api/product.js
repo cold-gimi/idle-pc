@@ -38,17 +38,37 @@ export function deleteProduct(id) {
   })
 }
 
-export function toggleProductStatus(id, status) {
+export function publishProduct(id) {
   return request({
-    url: `/products/${id}/status`,
-    method: 'put',
-    data: { status }
+    url: `/products/${id}/publish`,
+    method: 'put'
+  })
+}
+
+export function unpublishProduct(id) {
+  return request({
+    url: `/products/${id}/unpublish`,
+    method: 'put'
+  })
+}
+
+export function approveProduct(id) {
+  return request({
+    url: `/products/${id}/approve`,
+    method: 'put'
+  })
+}
+
+export function rejectProduct(id) {
+  return request({
+    url: `/products/${id}/reject`,
+    method: 'put'
   })
 }
 
 export function uploadImage(data) {
   return request({
-    url: '/upload',
+    url: '/products/upload',
     method: 'post',
     data,
     headers: {
