@@ -108,32 +108,29 @@
 </template>
 
 <script>
+import listPageMixin from '@/mixins/listPage'
+import { getStatusText, getStatusType } from '@/utils'
+import storageService from '@/utils/storageService'
+
 export default {
   name: 'Dictionary',
+  mixins: [listPageMixin],
   data() {
     return {
-      loading: false,
-      submitLoading: false,
-      total: 0,
-      queryParams: {
-        pageNum: 1,
-        pageSize: 10,
-        name: '',
-        dictKey: '',
-        status: ''
-      },
       dictList: [],
-      dialogVisible: false,
-      dialogTitle: '',
-      isAdd: false,
-      form: {
-        id: undefined,
-        name: '',
-        dictKey: '',
-        status: '1',
-        description: ''
+      statusMap: {
+        '1': '启用',
+        '0': '禁用'
       },
-      rules: {
+      statusTypeMap: {
+        '1': 'success',
+        '0': 'info'
+      }
+    }
+  },
+  computed: {
+    rules() {
+      return {
         name: [
           { required: true, message: '请输入字典名称', trigger: 'blur' },
           { min: 2, max: 100, message: '字典名称长度在 2 到 100 个字符', trigger: 'blur' }
@@ -149,21 +146,42 @@ export default {
     this.getList()
   },
   methods: {
+    getDefaultQueryParams() {
+      return {
+        name: '',
+        dictKey: '',
+        status: ''
+      }
+    },
+    getDefaultForm() {
+      return {
+        id: undefined,
+        name: '',
+        dictKey: '',
+        status: '1',
+        description: ''
+      }
+    },
+    getAddTitle() {
+      return '新增字典'
+    },
+    getEditTitle() {
+      return '编辑字典'
+    },
+    getDeleteConfirmText() {
+      return '是否确认删除该字典?'
+    },
+    getStatusText(status) {
+      return getStatusText(status, 'enabled')
+    },
+    getStatusType(status) {
+      return getStatusType(status, 'enabled')
+    },
     getList() {
       this.loading = true
       setTimeout(() => {
-        const mockData = [
-          { id: 1, name: '性别', dictKey: 'gender', description: '用户性别字典', status: '1', createTime: '2024-04-25 10:30:00' },
-          { id: 2, name: '状态', dictKey: 'status', description: '通用状态字典', status: '1', createTime: '2024-04-24 15:20:00' },
-          { id: 3, name: '商品分类', dictKey: 'product_category', description: '商品分类字典', status: '1', createTime: '2024-04-23 09:15:00' },
-          { id: 4, name: '订单状态', dictKey: 'order_status', description: '订单状态字典', status: '0', createTime: '2024-04-22 14:45:00' },
-          { id: 5, name: '支付方式', dictKey: 'payment_method', description: '支付方式字典', status: '1', createTime: '2024-04-21 11:30:00' },
-          { id: 6, name: '用户等级', dictKey: 'user_level', description: '用户等级字典', status: '1', createTime: '2024-04-20 16:45:00' },
-          { id: 7, name: '文章类型', dictKey: 'article_type', description: '文章类型字典', status: '0', createTime: '2024-04-19 08:30:00' },
-          { id: 8, name: '审核状态', dictKey: 'audit_status', description: '审核状态字典', status: '1', createTime: '2024-04-18 13:20:00' }
-        ]
-
-        let filtered = mockData
+        let filtered = storageService.getDictionaries()
+        
         if (this.queryParams.name) {
           filtered = filtered.filter(item => item.name.includes(this.queryParams.name))
         }
@@ -182,65 +200,24 @@ export default {
         this.loading = false
       }, 500)
     },
-    getStatusText(status) {
-      const statusMap = {
-        '1': '启用',
-        '0': '禁用'
+    saveItem() {
+      if (this.isAdd) {
+        const existing = storageService.getDictionaries().find(item => item.dictKey === this.form.dictKey)
+        if (existing) {
+          this.$message.error('字典Key已存在')
+          return
+        }
+        storageService.addDictionary({ ...this.form })
+        this.$message.success('新增成功')
+      } else {
+        storageService.updateDictionary(this.form.id, { ...this.form })
+        this.$message.success('修改成功')
       }
-      return statusMap[status] || status
     },
-    getStatusType(status) {
-      const typeMap = {
-        '1': 'success',
-        '0': 'info'
-      }
-      return typeMap[status] || 'info'
-    },
-    handleQuery() {
-      this.queryParams.pageNum = 1
+    deleteItem(row) {
+      storageService.deleteDictionary(row.id)
+      this.$message.success('删除成功')
       this.getList()
-    },
-    resetQuery() {
-      this.queryParams = {
-        pageNum: 1,
-        pageSize: 10,
-        name: '',
-        dictKey: '',
-        status: ''
-      }
-      this.getList()
-    },
-    handleSizeChange(val) {
-      this.queryParams.pageSize = val
-      this.getList()
-    },
-    handleCurrentChange(val) {
-      this.queryParams.pageNum = val
-      this.getList()
-    },
-    handleAdd() {
-      this.isAdd = true
-      this.dialogTitle = '新增字典'
-      this.form = {
-        id: undefined,
-        name: '',
-        dictKey: '',
-        status: '1',
-        description: ''
-      }
-      this.$nextTick(() => {
-        this.$refs.form && this.$refs.form.resetFields()
-      })
-      this.dialogVisible = true
-    },
-    handleEdit(row) {
-      this.isAdd = false
-      this.dialogTitle = '编辑字典'
-      this.form = Object.assign({}, row)
-      this.$nextTick(() => {
-        this.$refs.form && this.$refs.form.clearValidate()
-      })
-      this.dialogVisible = true
     },
     handleViewDetail(row) {
       this.$router.push(`/permission/dictionary/detail/${row.dictKey}`)
@@ -253,37 +230,10 @@ export default {
         cancelButtonText: '取消',
         type: 'warning'
       }).then(() => {
-        row.status = newStatus
+        storageService.updateDictionary(row.id, { status: newStatus })
         this.$message.success(`${statusText}成功`)
         this.getList()
       }).catch(() => {})
-    },
-    handleDelete(row) {
-      this.$confirm('是否确认删除该字典?', '警告', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }).then(() => {
-        this.$message.success('删除成功')
-        this.getList()
-      }).catch(() => {})
-    },
-    submitForm() {
-      this.$refs.form.validate(valid => {
-        if (valid) {
-          this.submitLoading = true
-          setTimeout(() => {
-            if (this.isAdd) {
-              this.$message.success('新增成功')
-            } else {
-              this.$message.success('修改成功')
-            }
-            this.dialogVisible = false
-            this.submitLoading = false
-            this.getList()
-          }, 500)
-        }
-      })
     }
   }
 }

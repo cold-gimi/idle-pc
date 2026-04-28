@@ -137,26 +137,21 @@
 </template>
 
 <script>
+import listPageMixin from '@/mixins/listPage'
+import { getStatusText, getStatusType } from '@/utils'
+import storageService from '@/utils/storageService'
+
 export default {
   name: 'DictionaryDetail',
+  mixins: [listPageMixin],
   data() {
     return {
-      loading: false,
-      submitLoading: false,
-      total: 0,
       dictKey: '',
       dictInfo: {
         name: '',
         dictKey: '',
         status: '1',
         description: ''
-      },
-      queryParams: {
-        pageNum: 1,
-        pageSize: 10,
-        itemName: '',
-        itemValue: '',
-        status: ''
       },
       dictItemList: [],
       itemDialogVisible: false,
@@ -171,8 +166,12 @@ export default {
         sort: 0,
         status: '1',
         description: ''
-      },
-      itemRules: {
+      }
+    }
+  },
+  computed: {
+    itemRules() {
+      return {
         itemName: [
           { required: true, message: '请输入字典项名称', trigger: 'blur' },
           { min: 1, max: 100, message: '字典项名称长度在 1 到 100 个字符', trigger: 'blur' }
@@ -190,29 +189,30 @@ export default {
     this.getList()
   },
   methods: {
+    getDefaultQueryParams() {
+      return {
+        itemName: '',
+        itemValue: '',
+        status: ''
+      }
+    },
     getDictInfo() {
-      const mockDictData = [
-        { id: 1, name: '性别', dictKey: 'gender', description: '用户性别字典', status: '1', createTime: '2024-04-25 10:30:00' },
-        { id: 2, name: '状态', dictKey: 'status', description: '通用状态字典', status: '1', createTime: '2024-04-24 15:20:00' },
-        { id: 3, name: '商品分类', dictKey: 'product_category', description: '商品分类字典', status: '1', createTime: '2024-04-23 09:15:00' },
-        { id: 4, name: '订单状态', dictKey: 'order_status', description: '订单状态字典', status: '0', createTime: '2024-04-22 14:45:00' },
-        { id: 5, name: '支付方式', dictKey: 'payment_method', description: '支付方式字典', status: '1', createTime: '2024-04-21 11:30:00' },
-        { id: 6, name: '用户等级', dictKey: 'user_level', description: '用户等级字典', status: '1', createTime: '2024-04-20 16:45:00' },
-        { id: 7, name: '文章类型', dictKey: 'article_type', description: '文章类型字典', status: '0', createTime: '2024-04-19 08:30:00' },
-        { id: 8, name: '审核状态', dictKey: 'audit_status', description: '审核状态字典', status: '1', createTime: '2024-04-18 13:20:00' }
-      ]
-
-      const dict = mockDictData.find(item => item.dictKey === this.dictKey)
+      const dict = storageService.getDictionaryByKey(this.dictKey)
       if (dict) {
         this.dictInfo = dict
       }
     },
+    getStatusText(status) {
+      return getStatusText(status, 'enabled')
+    },
+    getStatusType(status) {
+      return getStatusType(status, 'enabled')
+    },
     getList() {
       this.loading = true
       setTimeout(() => {
-        const mockData = this.getMockDictItems()
-
-        let filtered = mockData
+        let filtered = storageService.getDictItemsByKey(this.dictKey)
+        
         if (this.queryParams.itemName) {
           filtered = filtered.filter(item => item.itemName.includes(this.queryParams.itemName))
         }
@@ -231,93 +231,8 @@ export default {
         this.loading = false
       }, 500)
     },
-    getMockDictItems() {
-      const dictItemsMap = {
-        'gender': [
-          { id: 1, itemName: '男', itemValue: '1', sort: 1, status: '1', createTime: '2024-04-25 10:30:00', description: '男性' },
-          { id: 2, itemName: '女', itemValue: '2', sort: 2, status: '1', createTime: '2024-04-25 10:31:00', description: '女性' },
-          { id: 3, itemName: '未知', itemValue: '0', sort: 3, status: '0', createTime: '2024-04-25 10:32:00', description: '未知性别' }
-        ],
-        'status': [
-          { id: 1, itemName: '启用', itemValue: '1', sort: 1, status: '1', createTime: '2024-04-24 15:20:00', description: '启用状态' },
-          { id: 2, itemName: '禁用', itemValue: '0', sort: 2, status: '1', createTime: '2024-04-24 15:21:00', description: '禁用状态' }
-        ],
-        'product_category': [
-          { id: 1, itemName: '电子产品', itemValue: '1', sort: 1, status: '1', createTime: '2024-04-23 09:15:00', description: '' },
-          { id: 2, itemName: '家用电器', itemValue: '2', sort: 2, status: '1', createTime: '2024-04-23 09:16:00', description: '' },
-          { id: 3, itemName: '手机数码', itemValue: '3', sort: 3, status: '1', createTime: '2024-04-23 09:17:00', description: '' },
-          { id: 4, itemName: '服装鞋帽', itemValue: '4', sort: 4, status: '1', createTime: '2024-04-23 09:18:00', description: '' },
-          { id: 5, itemName: '图书文具', itemValue: '5', sort: 5, status: '0', createTime: '2024-04-23 09:19:00', description: '' }
-        ],
-        'order_status': [
-          { id: 1, itemName: '待付款', itemValue: '1', sort: 1, status: '1', createTime: '2024-04-22 14:45:00', description: '' },
-          { id: 2, itemName: '待发货', itemValue: '2', sort: 2, status: '1', createTime: '2024-04-22 14:46:00', description: '' },
-          { id: 3, itemName: '已发货', itemValue: '3', sort: 3, status: '1', createTime: '2024-04-22 14:47:00', description: '' },
-          { id: 4, itemName: '已完成', itemValue: '4', sort: 4, status: '1', createTime: '2024-04-22 14:48:00', description: '' },
-          { id: 5, itemName: '已取消', itemValue: '5', sort: 5, status: '0', createTime: '2024-04-22 14:49:00', description: '' }
-        ],
-        'payment_method': [
-          { id: 1, itemName: '微信支付', itemValue: '1', sort: 1, status: '1', createTime: '2024-04-21 11:30:00', description: '' },
-          { id: 2, itemName: '支付宝', itemValue: '2', sort: 2, status: '1', createTime: '2024-04-21 11:31:00', description: '' },
-          { id: 3, itemName: '银行卡', itemValue: '3', sort: 3, status: '1', createTime: '2024-04-21 11:32:00', description: '' }
-        ],
-        'user_level': [
-          { id: 1, itemName: '普通用户', itemValue: '1', sort: 1, status: '1', createTime: '2024-04-20 16:45:00', description: '' },
-          { id: 2, itemName: 'VIP用户', itemValue: '2', sort: 2, status: '1', createTime: '2024-04-20 16:46:00', description: '' },
-          { id: 3, itemName: 'SVIP用户', itemValue: '3', sort: 3, status: '1', createTime: '2024-04-20 16:47:00', description: '' }
-        ],
-        'article_type': [
-          { id: 1, itemName: '公告', itemValue: '1', sort: 1, status: '1', createTime: '2024-04-19 08:30:00', description: '' },
-          { id: 2, itemName: '新闻', itemValue: '2', sort: 2, status: '1', createTime: '2024-04-19 08:31:00', description: '' },
-          { id: 3, itemName: '活动', itemValue: '3', sort: 3, status: '0', createTime: '2024-04-19 08:32:00', description: '' }
-        ],
-        'audit_status': [
-          { id: 1, itemName: '待审核', itemValue: '1', sort: 1, status: '1', createTime: '2024-04-18 13:20:00', description: '' },
-          { id: 2, itemName: '审核通过', itemValue: '2', sort: 2, status: '1', createTime: '2024-04-18 13:21:00', description: '' },
-          { id: 3, itemName: '审核拒绝', itemValue: '3', sort: 3, status: '1', createTime: '2024-04-18 13:22:00', description: '' }
-        ]
-      }
-
-      return dictItemsMap[this.dictKey] || []
-    },
-    getStatusText(status) {
-      const statusMap = {
-        '1': '启用',
-        '0': '禁用'
-      }
-      return statusMap[status] || status
-    },
-    getStatusType(status) {
-      const typeMap = {
-        '1': 'success',
-        '0': 'info'
-      }
-      return typeMap[status] || 'info'
-    },
     handleBack() {
       this.$router.push('/permission/dictionary')
-    },
-    handleQuery() {
-      this.queryParams.pageNum = 1
-      this.getList()
-    },
-    resetQuery() {
-      this.queryParams = {
-        pageNum: 1,
-        pageSize: 10,
-        itemName: '',
-        itemValue: '',
-        status: ''
-      }
-      this.getList()
-    },
-    handleSizeChange(val) {
-      this.queryParams.pageSize = val
-      this.getList()
-    },
-    handleCurrentChange(val) {
-      this.queryParams.pageNum = val
-      this.getList()
     },
     handleAddItem() {
       this.isAddItem = true
@@ -356,7 +271,7 @@ export default {
         cancelButtonText: '取消',
         type: 'warning'
       }).then(() => {
-        row.status = newStatus
+        storageService.updateDictItem(this.dictKey, row.id, { status: newStatus })
         this.$message.success(`${statusText}成功`)
         this.getList()
       }).catch(() => {})
@@ -367,6 +282,7 @@ export default {
         cancelButtonText: '取消',
         type: 'warning'
       }).then(() => {
+        storageService.deleteDictItem(this.dictKey, row.id)
         this.$message.success('删除成功')
         this.getList()
       }).catch(() => {})
@@ -377,8 +293,18 @@ export default {
           this.submitLoading = true
           setTimeout(() => {
             if (this.isAddItem) {
+              const existing = storageService.getDictItemsByKey(this.dictKey).find(
+                item => item.itemValue === this.itemForm.itemValue
+              )
+              if (existing) {
+                this.$message.error('字典项值已存在')
+                this.submitLoading = false
+                return
+              }
+              storageService.addDictItem(this.dictKey, { ...this.itemForm })
               this.$message.success('新增成功')
             } else {
+              storageService.updateDictItem(this.dictKey, this.itemForm.id, { ...this.itemForm })
               this.$message.success('修改成功')
             }
             this.itemDialogVisible = false
