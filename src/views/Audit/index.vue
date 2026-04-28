@@ -173,6 +173,8 @@
 </template>
 
 <script>
+import request from '@/utils/request'
+
 export default {
   name: 'Audit',
   data() {
@@ -183,10 +185,10 @@ export default {
       activeTab: 'pending',
       dateRange: [],
       queryParams: {
-        pageNum: 1,
+        page: 1,
         pageSize: 10,
         title: '',
-        status: '',
+        status: 'pending',
         type: ''
       },
       auditList: [],
@@ -240,50 +242,35 @@ export default {
       } else {
         this.queryParams.status = tab.name
       }
-      this.queryParams.pageNum = 1
+      this.queryParams.page = 1
       this.getList()
     },
-    getList() {
+    async getList() {
       this.loading = true
-      setTimeout(() => {
-        const mockData = [
-          { id: 1, title: 'MacBook Pro 14寸 M1 Pro', submitter: '李四', type: '电子产品', price: 12999, status: 'pending', submitTime: '2024-04-25 10:30:00', description: '全新未拆封，公司奖品，低价出' },
-          { id: 2, title: '戴森 V15 无线吸尘器', submitter: '周八', type: '家用电器', price: 3999, status: 'pending', submitTime: '2024-04-24 15:20:00', description: '全新未拆封，官网购买' },
-          { id: 3, title: 'iPhone 15 Pro 钛金属', submitter: '钱九', type: '手机数码', price: 8999, status: 'pending', submitTime: '2024-04-23 09:15:00', description: '99新，使用一个月' },
-          { id: 4, title: 'iPad Pro 11寸 2021款', submitter: '赵六', type: '电子产品', price: 4999, status: 'rejected', submitTime: '2024-04-22 14:45:00', description: '8成新，屏幕有轻微划痕', auditOpinion: '屏幕划痕照片不清晰，请重新上传' },
-          { id: 5, title: 'AirPods Pro 2', submitter: '郑十', type: '电子产品', price: 1399, status: 'approved', submitTime: '2024-04-21 11:30:00', description: '99新，国行正品', auditOpinion: '审核通过' },
-          { id: 6, title: '小米手环 7 Pro', submitter: '陈二', type: '电子产品', price: 299, status: 'approved', submitTime: '2024-04-20 16:45:00', description: '95新，功能正常', auditOpinion: '审核通过' },
-          { id: 7, title: 'Switch OLED 游戏机', submitter: '王十一', type: '电子产品', price: 2299, status: 'approved', submitTime: '2024-04-19 08:30:00', description: '95新，带游戏卡带', auditOpinion: '审核通过' },
-          { id: 8, title: '戴森吹风机 HD08', submitter: '李十二', type: '家用电器', price: 2599, status: 'rejected', submitTime: '2024-04-18 13:20:00', description: '9成新，配件齐全', auditOpinion: '价格过高，请调整后重新提交' },
-          { id: 9, title: 'iPad Air 5', submitter: '张十三', type: '电子产品', price: 3999, status: 'pending', submitTime: '2024-04-17 09:45:00', description: '99新，使用半年' },
-          { id: 10, title: '华为 Watch GT 3', submitter: '刘十四', type: '电子产品', price: 899, status: 'pending', submitTime: '2024-04-16 14:10:00', description: '95新，功能正常' }
-        ]
-
-        let filtered = mockData
-        if (this.queryParams.title) {
-          filtered = filtered.filter(item => item.title.includes(this.queryParams.title))
+      try {
+        const params = {
+          page: this.queryParams.page,
+          pageSize: this.queryParams.pageSize,
+          title: this.queryParams.title
         }
         if (this.queryParams.status) {
-          filtered = filtered.filter(item => item.status === this.queryParams.status)
+          params.status = this.queryParams.status
         }
         if (this.queryParams.type) {
-          filtered = filtered.filter(item => item.type === this.queryParams.type)
+          params.type = this.queryParams.type
         }
         if (this.dateRange && this.dateRange.length === 2) {
-          const [startDate, endDate] = this.dateRange
-          filtered = filtered.filter(item => {
-            const itemDate = item.submitTime.split(' ')[0]
-            return itemDate >= startDate && itemDate <= endDate
-          })
+          params.startDate = this.dateRange[0]
+          params.endDate = this.dateRange[1]
         }
-
-        const start = (this.queryParams.pageNum - 1) * this.queryParams.pageSize
-        const end = start + this.queryParams.pageSize
-        
-        this.auditList = filtered.slice(start, end)
-        this.total = filtered.length
+        const res = await request.get('/audits', { params })
+        this.auditList = res.data.list
+        this.total = res.data.pagination.total
+      } catch (error) {
+        console.error('获取审核列表失败', error)
+      } finally {
         this.loading = false
-      }, 500)
+      }
     },
     getStatusText(status) {
       const statusMap = {
@@ -302,14 +289,14 @@ export default {
       return typeMap[status] || 'info'
     },
     handleQuery() {
-      this.queryParams.pageNum = 1
+      this.queryParams.page = 1
       this.getList()
     },
     resetQuery() {
       this.activeTab = 'pending'
       this.dateRange = []
       this.queryParams = {
-        pageNum: 1,
+        page: 1,
         pageSize: 10,
         title: '',
         status: 'pending',
@@ -322,12 +309,17 @@ export default {
       this.getList()
     },
     handleCurrentChange(val) {
-      this.queryParams.pageNum = val
+      this.queryParams.page = val
       this.getList()
     },
-    handleView(row) {
-      this.currentAudit = row
-      this.detailVisible = true
+    async handleView(row) {
+      try {
+        const res = await request.get(`/audits/${row.id}`)
+        this.currentAudit = res.data
+        this.detailVisible = true
+      } catch (error) {
+        console.error('获取审核详情失败', error)
+      }
     },
     handleEdit(row) {
       this.dialogTitle = '编辑审核'
@@ -337,26 +329,38 @@ export default {
       })
       this.dialogVisible = true
     },
-    handleDelete(row) {
-      this.$confirm('是否确认删除该审核记录?', '警告', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }).then(() => {
+    async handleDelete(row) {
+      try {
+        await this.$confirm('是否确认删除该审核记录?', '警告', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        })
+        await request.delete(`/audits/${row.id}`)
         this.$message.success('删除成功')
         this.getList()
-      }).catch(() => {})
+      } catch (error) {
+        if (error !== 'cancel') {
+          console.error('删除审核记录失败', error)
+        }
+      }
     },
-    handleApprove(row) {
-      this.$confirm('是否确认通过该审核?', '提示', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'success'
-      }).then(() => {
+    async handleApprove(row) {
+      try {
+        await this.$confirm('是否确认通过该审核?', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'success'
+        })
+        await request.put(`/audits/${row.id}/approve`)
         this.$message.success('审核通过')
         this.detailVisible = false
         this.getList()
-      }).catch(() => {})
+      } catch (error) {
+        if (error !== 'cancel') {
+          console.error('审核通过失败', error)
+        }
+      }
     },
     handleReject(row) {
       this.openRejectDialog(row)
@@ -370,29 +374,37 @@ export default {
       })
       this.rejectVisible = true
     },
-    submitReject() {
-      this.$refs.rejectForm.validate(valid => {
+    async submitReject() {
+      this.$refs.rejectForm.validate(async valid => {
         if (valid) {
           this.submitLoading = true
-          setTimeout(() => {
+          try {
+            await request.put(`/audits/${this.currentAudit.id}/reject`, { reason: this.rejectForm.reason })
             this.$message.success('已拒绝')
             this.rejectVisible = false
-            this.submitLoading = false
             this.getList()
-          }, 500)
+          } catch (error) {
+            console.error('拒绝审核失败', error)
+          } finally {
+            this.submitLoading = false
+          }
         }
       })
     },
-    submitForm() {
-      this.$refs.form.validate(valid => {
+    async submitForm() {
+      this.$refs.form.validate(async valid => {
         if (valid) {
           this.submitLoading = true
-          setTimeout(() => {
+          try {
+            await request.put(`/audits/${this.form.id}`, this.form)
             this.$message.success('修改成功')
             this.dialogVisible = false
-            this.submitLoading = false
             this.getList()
-          }, 500)
+          } catch (error) {
+            console.error('修改审核记录失败', error)
+          } finally {
+            this.submitLoading = false
+          }
         }
       })
     }

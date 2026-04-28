@@ -3,8 +3,8 @@
     <div class="page-header">
       <h3 class="page-title">文章管理</h3>
       <div class="header-buttons">
-        <el-button type="primary" icon="el-icon-plus" @click="handleAdd">新增文章</el-button>
-        <el-button type="success" icon="el-icon-plus" @click="handleAddCategory">新增分类</el-button>
+        <el-button type="primary" icon="el-icon-plus" @click="handleAddArticle">新增文章</el-button>
+        <el-button type="success" icon="el-icon-s-operation" @click="handleOpenCategoryManager">分类管理</el-button>
       </div>
     </div>
 
@@ -12,6 +12,17 @@
       <div class="filter-item">
         <span class="filter-label">标题：</span>
         <el-input v-model="queryParams.title" placeholder="请输入标题" clearable style="width: 200px;" @keyup.enter.native="handleQuery" />
+      </div>
+      <div class="filter-item">
+        <span class="filter-label">分类：</span>
+        <el-select v-model="queryParams.category" placeholder="请选择分类" clearable style="width: 150px;">
+          <el-option
+            v-for="item in categoryOptions"
+            :key="item.value"
+            :label="item.label"
+            :value="item.value"
+          />
+        </el-select>
       </div>
       <div class="filter-item">
         <span class="filter-label">状态：</span>
@@ -45,7 +56,7 @@
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="title" label="标题" min-width="200" />
         <el-table-column prop="author" label="作者" width="120" />
-        <el-table-column prop="category" label="分类" width="120" />
+        <el-table-column prop="categoryName" label="分类" width="120" />
         <el-table-column prop="price" label="价格" width="100">
           <template slot-scope="scope">
             ¥{{ scope.row.price }}
@@ -56,12 +67,12 @@
             <el-tag :type="getStatusType(scope.row.status)">{{ getStatusText(scope.row.status) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="createTime" label="创建时间" width="180" />
+        <el-table-column prop="createdAt" label="创建时间" width="180" />
         <el-table-column label="操作" width="200" fixed="right">
           <template slot-scope="scope">
-            <el-button type="text" size="small" @click="handleView(scope.row)">查看</el-button>
-            <el-button type="text" size="small" @click="handleEdit(scope.row)">编辑</el-button>
-            <el-button type="text" size="small" class="text-red" @click="handleDelete(scope.row)">删除</el-button>
+            <el-button type="text" size="small" @click="handleViewArticle(scope.row)">查看</el-button>
+            <el-button type="text" size="small" @click="handleEditArticle(scope.row)">编辑</el-button>
+            <el-button type="text" size="small" class="text-red" @click="handleDeleteArticle(scope.row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -71,7 +82,7 @@
       <el-pagination
         @size-change="handleSizeChange"
         @current-change="handleCurrentChange"
-        :current-page="queryParams.pageNum"
+        :current-page="queryParams.page"
         :page-sizes="[10, 20, 50, 100]"
         :page-size="queryParams.pageSize"
         layout="total, sizes, prev, pager, next, jumper"
@@ -80,37 +91,34 @@
       </el-pagination>
     </div>
 
-    <el-dialog :title="dialogTitle" :visible.sync="dialogVisible" width="700px" :close-on-click-modal="false">
-      <el-form :model="form" :rules="rules" ref="form" label-width="100px">
+    <el-dialog :title="articleDialogTitle" :visible.sync="articleDialogVisible" width="700px" :close-on-click-modal="false">
+      <el-form :model="articleForm" :rules="articleRules" ref="articleForm" label-width="100px">
         <el-form-item label="标题" prop="title">
-          <el-input v-model="form.title" placeholder="请输入标题" />
+          <el-input v-model="articleForm.title" placeholder="请输入标题" />
         </el-form-item>
         <el-form-item label="作者" prop="author">
-          <el-input v-model="form.author" placeholder="请输入作者" />
+          <el-input v-model="articleForm.author" placeholder="请输入作者" />
         </el-form-item>
-        <el-form-item label="分类" prop="category">
+        <el-form-item label="分类" prop="categoryId">
           <el-select
-            v-model="form.category"
+            v-model="articleForm.categoryId"
             placeholder="请选择分类"
             style="width: 100%;"
             filterable
-            allow-create
-            default-first-option
-            @change="handleCategoryChange"
           >
             <el-option
-              v-for="category in categoryList"
-              :key="category"
-              :label="category"
-              :value="category"
+              v-for="item in categoryOptions"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
             />
           </el-select>
         </el-form-item>
         <el-form-item label="价格" prop="price">
-          <el-input-number v-model="form.price" :min="0" :precision="2" placeholder="请输入价格" />
+          <el-input-number v-model="articleForm.price" :min="0" :precision="2" placeholder="请输入价格" style="width: 100%;" />
         </el-form-item>
         <el-form-item label="状态" prop="status">
-          <el-radio-group v-model="form.status">
+          <el-radio-group v-model="articleForm.status">
             <el-radio label="draft">草稿</el-radio>
             <el-radio label="pending">待审核</el-radio>
             <el-radio label="published">已发布</el-radio>
@@ -118,7 +126,7 @@
         </el-form-item>
         <el-form-item label="描述" prop="description">
           <el-input
-            v-model="form.description"
+            v-model="articleForm.description"
             type="textarea"
             :rows="4"
             placeholder="请输入描述"
@@ -126,30 +134,47 @@
         </el-form-item>
       </el-form>
       <div slot="footer" class="dialog-footer">
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitForm" :loading="submitLoading">确定</el-button>
+        <el-button @click="articleDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitArticleForm" :loading="articleSubmitLoading">确定</el-button>
       </div>
     </el-dialog>
 
-    <el-dialog title="文章详情" :visible.sync="detailVisible" width="600px">
+    <el-dialog title="文章详情" :visible.sync="articleDetailVisible" width="600px">
       <el-descriptions :column="2" border>
         <el-descriptions-item label="ID">{{ currentArticle.id }}</el-descriptions-item>
         <el-descriptions-item label="标题">{{ currentArticle.title }}</el-descriptions-item>
         <el-descriptions-item label="作者">{{ currentArticle.author }}</el-descriptions-item>
-        <el-descriptions-item label="分类">{{ currentArticle.category }}</el-descriptions-item>
+        <el-descriptions-item label="分类">{{ currentArticle.categoryName }}</el-descriptions-item>
         <el-descriptions-item label="价格">¥{{ currentArticle.price }}</el-descriptions-item>
         <el-descriptions-item label="状态">
           <el-tag :type="getStatusType(currentArticle.status)">{{ getStatusText(currentArticle.status) }}</el-tag>
         </el-descriptions-item>
-        <el-descriptions-item label="创建时间" :span="2">{{ currentArticle.createTime }}</el-descriptions-item>
+        <el-descriptions-item label="创建时间" :span="2">{{ currentArticle.createdAt }}</el-descriptions-item>
         <el-descriptions-item label="描述" :span="2">{{ currentArticle.description }}</el-descriptions-item>
       </el-descriptions>
       <div slot="footer" class="dialog-footer">
-        <el-button @click="detailVisible = false">关闭</el-button>
+        <el-button @click="articleDetailVisible = false">关闭</el-button>
       </div>
     </el-dialog>
 
-    <el-dialog title="新增分类" :visible.sync="categoryDialogVisible" width="400px">
+    <el-dialog title="分类管理" :visible.sync="categoryManagerVisible" width="800px" :close-on-click-modal="false">
+      <div class="category-header">
+        <el-button type="primary" icon="el-icon-plus" @click="handleAddCategory">新增分类</el-button>
+      </div>
+      <el-table :data="categoryList" v-loading="categoryLoading" stripe style="width: 100%">
+        <el-table-column prop="id" label="ID" width="80" />
+        <el-table-column prop="name" label="分类名称" min-width="200" />
+        <el-table-column prop="createdAt" label="创建时间" width="180" />
+        <el-table-column label="操作" width="200" fixed="right">
+          <template slot-scope="scope">
+            <el-button type="text" size="small" @click="handleEditCategory(scope.row)">编辑</el-button>
+            <el-button type="text" size="small" class="text-red" @click="handleDeleteCategory(scope.row)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-dialog>
+
+    <el-dialog :title="categoryDialogTitle" :visible.sync="categoryDialogVisible" width="400px" :close-on-click-modal="false">
       <el-form :model="categoryForm" :rules="categoryRules" ref="categoryForm" label-width="80px">
         <el-form-item label="分类名称" prop="name">
           <el-input v-model="categoryForm.name" placeholder="请输入分类名称" />
@@ -164,44 +189,39 @@
 </template>
 
 <script>
+import request from '@/utils/request'
+
 export default {
   name: 'Article',
   data() {
     return {
       loading: false,
-      submitLoading: false,
       total: 0,
       dateRange: [],
       queryParams: {
-        pageNum: 1,
+        page: 1,
         pageSize: 10,
         title: '',
+        category: '',
         status: ''
       },
       articleList: [],
-      dialogVisible: false,
-      dialogTitle: '',
-      isAdd: false,
-      detailVisible: false,
+      articleDialogVisible: false,
+      articleDialogTitle: '',
+      isAddArticle: false,
+      articleDetailVisible: false,
       currentArticle: {},
-      categoryList: [
-        '电子产品',
-        '家用电器',
-        '手机数码',
-        '服装鞋帽',
-        '图书文具',
-        '其他'
-      ],
-      form: {
+      articleSubmitLoading: false,
+      articleForm: {
         id: undefined,
         title: '',
         author: '',
-        category: '',
+        categoryId: undefined,
         price: 0,
         status: 'draft',
         description: ''
       },
-      rules: {
+      articleRules: {
         title: [
           { required: true, message: '请输入标题', trigger: 'blur' },
           { min: 2, max: 100, message: '标题长度在 2 到 100 个字符', trigger: 'blur' }
@@ -209,68 +229,82 @@ export default {
         author: [
           { required: true, message: '请输入作者', trigger: 'blur' }
         ],
-        category: [
+        categoryId: [
           { required: true, message: '请选择分类', trigger: 'change' }
         ],
         price: [
           { required: true, message: '请输入价格', trigger: 'blur' }
         ]
       },
+      categoryManagerVisible: false,
+      categoryLoading: false,
+      categoryList: [],
       categoryDialogVisible: false,
+      categoryDialogTitle: '',
+      isAddCategory: false,
       categorySubmitLoading: false,
       categoryForm: {
+        id: undefined,
         name: ''
       },
       categoryRules: {
         name: [
           { required: true, message: '请输入分类名称', trigger: 'blur' },
-          { min: 1, max: 20, message: '分类名称长度在 1 到 20 个字符', trigger: 'blur' }
+          { min: 1, max: 50, message: '分类名称长度在 1 到 50 个字符', trigger: 'blur' }
         ]
       }
     }
   },
+  computed: {
+    categoryOptions() {
+      return this.categoryList.map(item => ({
+        label: item.name,
+        value: item.id
+      }))
+    }
+  },
   created() {
-    this.getList()
+    this.getArticleList()
+    this.getCategoryList()
   },
   methods: {
-    getList() {
+    async getArticleList() {
       this.loading = true
-      setTimeout(() => {
-        const mockData = [
-          { id: 1, title: 'iPhone 13 Pro Max 256G 远峰蓝', author: '张三', category: '手机数码', price: 6999, status: 'published', createTime: '2024-04-25 10:30:00', description: '95新，使用一年，无磕碰，电池健康度92%' },
-          { id: 2, title: 'MacBook Pro 14寸 M1 Pro', author: '李四', category: '电子产品', price: 12999, status: 'pending', createTime: '2024-04-24 15:20:00', description: '全新未拆封，公司奖品，低价出' },
-          { id: 3, title: '索尼 WH-1000XM4 无线耳机', author: '王五', category: '电子产品', price: 1299, status: 'published', createTime: '2024-04-23 09:15:00', description: '99新，配件齐全，音质超好' },
-          { id: 4, title: 'iPad Pro 11寸 2021款', author: '赵六', category: '电子产品', price: 4999, status: 'rejected', createTime: '2024-04-22 14:45:00', description: '8成新，屏幕有轻微划痕' },
-          { id: 5, title: '任天堂 Switch OLED', author: '孙七', category: '电子产品', price: 2299, status: 'published', createTime: '2024-04-21 11:30:00', description: '95新，带三个游戏卡带' },
-          { id: 6, title: '戴森 V15 无线吸尘器', author: '周八', category: '家用电器', price: 3999, status: 'pending', createTime: '2024-04-20 16:45:00', description: '全新未拆封，官网购买' },
-          { id: 7, title: '华为 Mate 40 Pro', author: '吴九', category: '手机数码', price: 4599, status: 'draft', createTime: '2024-04-19 08:30:00', description: '9成新，使用半年' },
-          { id: 8, title: 'AirPods Pro 2', author: '郑十', category: '电子产品', price: 1399, status: 'published', createTime: '2024-04-18 13:20:00', description: '99新，国行正品' },
-          { id: 9, title: '机械键盘 樱桃红轴', author: '冯一', category: '电子产品', price: 599, status: 'published', createTime: '2024-04-17 09:45:00', description: '8成新，按键正常' },
-          { id: 10, title: '小米手环 7 Pro', author: '陈二', category: '电子产品', price: 299, status: 'pending', createTime: '2024-04-16 14:10:00', description: '95新，功能正常' }
-        ]
-
-        let filtered = mockData
+      try {
+        const params = {
+          page: this.queryParams.page,
+          pageSize: this.queryParams.pageSize
+        }
         if (this.queryParams.title) {
-          filtered = filtered.filter(item => item.title.includes(this.queryParams.title))
+          params.title = this.queryParams.title
+        }
+        if (this.queryParams.category) {
+          params.categoryId = this.queryParams.category
         }
         if (this.queryParams.status) {
-          filtered = filtered.filter(item => item.status === this.queryParams.status)
+          params.status = this.queryParams.status
         }
         if (this.dateRange && this.dateRange.length === 2) {
-          const [startDate, endDate] = this.dateRange
-          filtered = filtered.filter(item => {
-            const itemDate = item.createTime.split(' ')[0]
-            return itemDate >= startDate && itemDate <= endDate
-          })
+          params.startDate = this.dateRange[0]
+          params.endDate = this.dateRange[1]
         }
-
-        const start = (this.queryParams.pageNum - 1) * this.queryParams.pageSize
-        const end = start + this.queryParams.pageSize
-        
-        this.articleList = filtered.slice(start, end)
-        this.total = filtered.length
+        const res = await request.get('/articles', { params })
+        this.articleList = res.data?.list || res.data?.items || []
+        this.total = res.data?.pagination?.total || res.data?.total || 0
+      } catch (error) {
+        console.error('获取文章列表失败', error)
+      } finally {
         this.loading = false
-      }, 500)
+      }
+    },
+    async getCategoryList() {
+      try {
+        const res = await request.get('/articles/categories')
+        this.categoryList = res.data || []
+      } catch (error) {
+        console.error('获取分类列表失败', error)
+        this.categoryList = []
+      }
     },
     getStatusText(status) {
       const statusMap = {
@@ -291,91 +325,124 @@ export default {
       return typeMap[status] || 'info'
     },
     handleQuery() {
-      this.queryParams.pageNum = 1
-      this.getList()
+      this.queryParams.page = 1
+      this.getArticleList()
     },
     resetQuery() {
       this.dateRange = []
       this.queryParams = {
-        pageNum: 1,
+        page: 1,
         pageSize: 10,
         title: '',
+        category: '',
         status: ''
       }
-      this.getList()
-    },
-    handleCategoryChange(value) {
-      if (value && !this.categoryList.includes(value)) {
-        this.categoryList.push(value)
-      }
+      this.getArticleList()
     },
     handleSizeChange(val) {
       this.queryParams.pageSize = val
-      this.getList()
+      this.getArticleList()
     },
     handleCurrentChange(val) {
-      this.queryParams.pageNum = val
-      this.getList()
+      this.queryParams.page = val
+      this.getArticleList()
     },
-    handleAdd() {
-      this.isAdd = true
-      this.dialogTitle = '新增文章'
-      this.form = {
+    handleAddArticle() {
+      this.isAddArticle = true
+      this.articleDialogTitle = '新增文章'
+      this.articleForm = {
         id: undefined,
         title: '',
         author: '',
-        category: '',
+        categoryId: this.categoryList.length > 0 ? this.categoryList[0].id : undefined,
         price: 0,
         status: 'draft',
         description: ''
       }
       this.$nextTick(() => {
-        this.$refs.form && this.$refs.form.resetFields()
+        this.$refs.articleForm && this.$refs.articleForm.resetFields()
       })
-      this.dialogVisible = true
+      this.articleDialogVisible = true
     },
-    handleEdit(row) {
-      this.isAdd = false
-      this.dialogTitle = '编辑文章'
-      this.form = Object.assign({}, row)
+    handleEditArticle(row) {
+      this.isAddArticle = false
+      this.articleDialogTitle = '编辑文章'
+      this.articleForm = {
+        id: row.id,
+        title: row.title,
+        author: row.author,
+        categoryId: row.categoryId,
+        price: row.price,
+        status: row.status,
+        description: row.description
+      }
       this.$nextTick(() => {
-        this.$refs.form && this.$refs.form.clearValidate()
+        this.$refs.articleForm && this.$refs.articleForm.clearValidate()
       })
-      this.dialogVisible = true
+      this.articleDialogVisible = true
     },
-    handleView(row) {
-      this.currentArticle = row
-      this.detailVisible = true
+    async handleViewArticle(row) {
+      try {
+        const res = await request.get(`/articles/${row.id}`)
+        this.currentArticle = res.data || {}
+        if (!this.currentArticle.categoryName && this.currentArticle.categoryId) {
+          const category = this.categoryList.find(c => c.id === this.currentArticle.categoryId)
+          if (category) {
+            this.currentArticle.categoryName = category.name
+          }
+        }
+        this.articleDetailVisible = true
+      } catch (error) {
+        console.error('获取文章详情失败', error)
+      }
     },
-    handleDelete(row) {
-      this.$confirm('是否确认删除该文章?', '警告', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }).then(() => {
+    async handleDeleteArticle(row) {
+      try {
+        await this.$confirm('是否确认删除该文章?', '警告', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        })
+        await request.delete(`/articles/${row.id}`)
         this.$message.success('删除成功')
-        this.getList()
-      }).catch(() => {})
+        this.getArticleList()
+      } catch (error) {
+        if (error !== 'cancel') {
+          console.error('删除文章失败', error)
+        }
+      }
     },
-    submitForm() {
-      this.$refs.form.validate(valid => {
+    async submitArticleForm() {
+      this.$refs.articleForm.validate(async valid => {
         if (valid) {
-          this.submitLoading = true
-          setTimeout(() => {
-            if (this.isAdd) {
+          this.articleSubmitLoading = true
+          try {
+            if (this.isAddArticle) {
+              await request.post('/articles', this.articleForm)
               this.$message.success('新增成功')
             } else {
+              await request.put(`/articles/${this.articleForm.id}`, this.articleForm)
               this.$message.success('修改成功')
             }
-            this.dialogVisible = false
-            this.submitLoading = false
-            this.getList()
-          }, 500)
+            this.articleDialogVisible = false
+            this.getArticleList()
+          } catch (error) {
+            console.error('提交失败', error)
+          } finally {
+            this.articleSubmitLoading = false
+          }
         }
       })
     },
+    handleOpenCategoryManager() {
+      this.categoryManagerVisible = true
+      this.getCategoryList()
+    },
     handleAddCategory() {
+      this.isAddCategory = true
+      this.categoryDialogTitle = '新增分类'
       this.categoryForm = {
+        id: undefined,
         name: ''
       }
       this.$nextTick(() => {
@@ -383,21 +450,62 @@ export default {
       })
       this.categoryDialogVisible = true
     },
-    submitCategoryForm() {
-      this.$refs.categoryForm.validate(valid => {
+    handleEditCategory(row) {
+      this.isAddCategory = false
+      this.categoryDialogTitle = '编辑分类'
+      this.categoryForm = {
+        id: row.id,
+        name: row.name
+      }
+      this.$nextTick(() => {
+        this.$refs.categoryForm && this.$refs.categoryForm.clearValidate()
+      })
+      this.categoryDialogVisible = true
+    },
+    async handleDeleteCategory(row) {
+      try {
+        await this.$confirm('是否确认删除该分类? 删除后关联的文章分类将被清空。', '警告', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        })
+        await request.delete(`/articles/categories/${row.id}`)
+        this.$message.success('删除成功')
+        this.getCategoryList()
+        this.getArticleList()
+      } catch (error) {
+        if (error !== 'cancel') {
+          console.error('删除分类失败', error)
+        }
+      }
+    },
+    async submitCategoryForm() {
+      this.$refs.categoryForm.validate(async valid => {
         if (valid) {
           const categoryName = this.categoryForm.name.trim()
-          if (this.categoryList.includes(categoryName)) {
-            this.$message.error('该分类已存在')
+          const existing = this.categoryList.find(
+            c => c.name === categoryName && c.id !== this.categoryForm.id
+          )
+          if (existing) {
+            this.$message.error('该分类名称已存在')
             return
           }
           this.categorySubmitLoading = true
-          setTimeout(() => {
-            this.categoryList.push(categoryName)
-            this.$message.success('新增分类成功')
+          try {
+            if (this.isAddCategory) {
+              await request.post('/articles/categories', { name: categoryName })
+              this.$message.success('新增分类成功')
+            } else {
+              await request.put(`/articles/categories/${this.categoryForm.id}`, { name: categoryName })
+              this.$message.success('修改分类成功')
+            }
             this.categoryDialogVisible = false
+            this.getCategoryList()
+          } catch (error) {
+            console.error('提交分类失败', error)
+          } finally {
             this.categorySubmitLoading = false
-          }, 500)
+          }
         }
       })
     }
@@ -412,5 +520,8 @@ export default {
 .header-buttons {
   display: flex;
   gap: 10px;
+}
+.category-header {
+  margin-bottom: 16px;
 }
 </style>
