@@ -289,11 +289,21 @@ export default {
           params.endDate = this.dateRange[1]
         }
         const res = await article.getArticleList(params)
-        this.articleList = res.data?.list || res.data?.items || []
-        this.total = res.data?.pagination?.total || res.data?.total || 0
+        if (res && res.data) {
+          this.articleList = Array.isArray(res.data.list) ? res.data.list : 
+                             (Array.isArray(res.data.items) ? res.data.items : [])
+          this.total = typeof res.data?.pagination?.total === 'number' ? res.data.pagination.total :
+                       (typeof res.data?.total === 'number' ? res.data.total : 0)
+        } else {
+          this.articleList = []
+          this.total = 0
+        }
       } catch (error) {
         console.error('获取文章列表失败', error)
-        this.$message.error('获取文章列表失败')
+        this.articleList = []
+        this.total = 0
+        const errorMsg = error?.message || '获取文章列表失败'
+        this.$message.error(errorMsg)
       } finally {
         this.loading = false
       }
@@ -301,11 +311,22 @@ export default {
     async getCategoryList() {
       try {
         const res = await article.getCategoryList()
-        this.categoryList = res.data.list || []
+        if (res && res.data) {
+          if (Array.isArray(res.data)) {
+            this.categoryList = res.data
+          } else if (Array.isArray(res.data.list)) {
+            this.categoryList = res.data.list
+          } else {
+            this.categoryList = []
+          }
+        } else {
+          this.categoryList = []
+        }
       } catch (error) {
         console.error('获取分类列表失败', error)
         this.categoryList = []
-        this.$message.error('获取分类列表失败')
+        const errorMsg = error?.message || '获取分类列表失败'
+        this.$message.error(errorMsg)
       }
     },
     getStatusText(status) {
@@ -385,34 +406,52 @@ export default {
     },
     async handleViewArticle(row) {
       try {
-        const res = await article.getArticleDetail(row.id)
-        this.currentArticle = res.data || {}
-        if (!this.currentArticle.categoryName && this.currentArticle.categoryId) {
-          const category = this.categoryList.find(c => c.id === this.currentArticle.categoryId)
-          if (category) {
-            this.currentArticle.categoryName = category.name
-          }
+        if (!row || !row.id) {
+          this.$message.error('文章ID无效')
+          return
         }
-        this.articleDetailVisible = true
+        const res = await article.getArticleDetail(row.id)
+        if (res && res.data) {
+          this.currentArticle = res.data
+          if (!this.currentArticle.categoryName && this.currentArticle.categoryId) {
+            const category = this.categoryList.find(c => c.id === this.currentArticle.categoryId)
+            if (category) {
+              this.currentArticle.categoryName = category.name
+            }
+          }
+          this.articleDetailVisible = true
+        } else {
+          this.$message.error('获取文章详情失败：返回数据格式错误')
+        }
       } catch (error) {
         console.error('获取文章详情失败', error)
-        this.$message.error('获取文章详情失败')
+        const errorMsg = error?.message || '获取文章详情失败'
+        this.$message.error(errorMsg)
       }
     },
     async handleDeleteArticle(row) {
       try {
+        if (!row || !row.id) {
+          this.$message.error('文章ID无效')
+          return
+        }
         await this.$confirm('是否确认删除该文章?', '警告', {
           confirmButtonText: '确定',
           cancelButtonText: '取消',
           type: 'warning'
         })
-        await article.deleteArticle(row.id)
-        this.$message.success('删除成功')
-        this.getArticleList()
+        const res = await article.deleteArticle(row.id)
+        if (res && (res.code === 0 || res.code === undefined)) {
+          this.$message.success('删除成功')
+          this.getArticleList()
+        } else {
+          this.$message.error(res?.message || '删除失败')
+        }
       } catch (error) {
         if (error !== 'cancel') {
           console.error('删除文章失败', error)
-          this.$message.error('删除文章失败')
+          const errorMsg = error?.message || '删除文章失败'
+          this.$message.error(errorMsg)
         }
       }
     },
@@ -421,18 +460,34 @@ export default {
         if (valid) {
           this.articleSubmitLoading = true
           try {
+            let res
             if (this.isAddArticle) {
-              await article.createArticle(this.articleForm)
-              this.$message.success('新增成功')
+              res = await article.createArticle(this.articleForm)
+              if (res && (res.code === 0 || res.code === undefined)) {
+                this.$message.success('新增成功')
+                this.articleDialogVisible = false
+                this.getArticleList()
+              } else {
+                this.$message.error(res?.message || '新增失败')
+              }
             } else {
-              await article.updateArticle(this.articleForm.id, this.articleForm)
-              this.$message.success('修改成功')
+              if (!this.articleForm.id) {
+                this.$message.error('文章ID无效')
+                return
+              }
+              res = await article.updateArticle(this.articleForm.id, this.articleForm)
+              if (res && (res.code === 0 || res.code === undefined)) {
+                this.$message.success('修改成功')
+                this.articleDialogVisible = false
+                this.getArticleList()
+              } else {
+                this.$message.error(res?.message || '修改失败')
+              }
             }
-            this.articleDialogVisible = false
-            this.getArticleList()
           } catch (error) {
             console.error('提交失败', error)
-            this.$message.error(this.isAddArticle ? '新增失败' : '修改失败')
+            const errorMsg = error?.message || (this.isAddArticle ? '新增失败' : '修改失败')
+            this.$message.error(errorMsg)
           } finally {
             this.articleSubmitLoading = false
           }
@@ -469,19 +524,28 @@ export default {
     },
     async handleDeleteCategory(row) {
       try {
+        if (!row || !row.id) {
+          this.$message.error('分类ID无效')
+          return
+        }
         await this.$confirm('是否确认删除该分类? 删除后关联的文章分类将被清空。', '警告', {
           confirmButtonText: '确定',
           cancelButtonText: '取消',
           type: 'warning'
         })
-        await article.deleteCategory(row.id)
-        this.$message.success('删除成功')
-        this.getCategoryList()
-        this.getArticleList()
+        const res = await article.deleteCategory(row.id)
+        if (res && (res.code === 0 || res.code === undefined)) {
+          this.$message.success('删除成功')
+          this.getCategoryList()
+          this.getArticleList()
+        } else {
+          this.$message.error(res?.message || '删除失败')
+        }
       } catch (error) {
         if (error !== 'cancel') {
           console.error('删除分类失败', error)
-          this.$message.error('删除分类失败')
+          const errorMsg = error?.message || '删除分类失败'
+          this.$message.error(errorMsg)
         }
       }
     },
@@ -489,6 +553,10 @@ export default {
       this.$refs.categoryForm.validate(async valid => {
         if (valid) {
           const categoryName = this.categoryForm.name.trim()
+          if (!categoryName) {
+            this.$message.error('分类名称不能为空')
+            return
+          }
           const existing = this.categoryList.find(
             c => c.name === categoryName && c.id !== this.categoryForm.id
           )
@@ -498,18 +566,34 @@ export default {
           }
           this.categorySubmitLoading = true
           try {
+            let res
             if (this.isAddCategory) {
-              await article.createCategory({ name: categoryName })
-              this.$message.success('新增分类成功')
+              res = await article.createCategory({ name: categoryName })
+              if (res && (res.code === 0 || res.code === undefined)) {
+                this.$message.success('新增分类成功')
+                this.categoryDialogVisible = false
+                this.getCategoryList()
+              } else {
+                this.$message.error(res?.message || '新增分类失败')
+              }
             } else {
-              await article.updateCategory(this.categoryForm.id, { name: categoryName })
-              this.$message.success('修改分类成功')
+              if (!this.categoryForm.id) {
+                this.$message.error('分类ID无效')
+                return
+              }
+              res = await article.updateCategory(this.categoryForm.id, { name: categoryName })
+              if (res && (res.code === 0 || res.code === undefined)) {
+                this.$message.success('修改分类成功')
+                this.categoryDialogVisible = false
+                this.getCategoryList()
+              } else {
+                this.$message.error(res?.message || '修改分类失败')
+              }
             }
-            this.categoryDialogVisible = false
-            this.getCategoryList()
           } catch (error) {
             console.error('提交分类失败', error)
-            this.$message.error(this.isAddCategory ? '新增分类失败' : '修改分类失败')
+            const errorMsg = error?.message || (this.isAddCategory ? '新增分类失败' : '修改分类失败')
+            this.$message.error(errorMsg)
           } finally {
             this.categorySubmitLoading = false
           }

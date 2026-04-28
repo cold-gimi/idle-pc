@@ -266,11 +266,21 @@ export default {
           params.endDate = this.dateRange[1]
         }
         const res = await audit.getAuditList(params)
-        this.auditList = res.data?.list || res.data?.items || []
-        this.total = res.data?.pagination?.total || res.data?.total || 0
+        if (res && res.data) {
+          this.auditList = Array.isArray(res.data.list) ? res.data.list : 
+                           (Array.isArray(res.data.items) ? res.data.items : [])
+          this.total = typeof res.data?.pagination?.total === 'number' ? res.data.pagination.total :
+                       (typeof res.data?.total === 'number' ? res.data.total : 0)
+        } else {
+          this.auditList = []
+          this.total = 0
+        }
       } catch (error) {
         console.error('获取审核列表失败', error)
-        this.$message.error('获取审核列表失败')
+        this.auditList = []
+        this.total = 0
+        const errorMsg = error?.message || '获取审核列表失败'
+        this.$message.error(errorMsg)
       } finally {
         this.loading = false
       }
@@ -317,15 +327,28 @@ export default {
     },
     async handleView(row) {
       try {
+        if (!row || !row.id) {
+          this.$message.error('审核记录ID无效')
+          return
+        }
         const res = await audit.getAuditDetail(row.id)
-        this.currentAudit = res.data || {}
-        this.detailVisible = true
+        if (res && res.data) {
+          this.currentAudit = res.data
+          this.detailVisible = true
+        } else {
+          this.$message.error('获取审核详情失败：返回数据格式错误')
+        }
       } catch (error) {
         console.error('获取审核详情失败', error)
-        this.$message.error('获取审核详情失败')
+        const errorMsg = error?.message || '获取审核详情失败'
+        this.$message.error(errorMsg)
       }
     },
     handleEdit(row) {
+      if (!row || !row.id) {
+        this.$message.error('审核记录ID无效')
+        return
+      }
       this.dialogTitle = '编辑审核'
       this.form = {
         id: row.id,
@@ -342,36 +365,54 @@ export default {
     },
     async handleDelete(row) {
       try {
+        if (!row || !row.id) {
+          this.$message.error('审核记录ID无效')
+          return
+        }
         await this.$confirm('是否确认删除该审核记录?', '警告', {
           confirmButtonText: '确定',
           cancelButtonText: '取消',
           type: 'warning'
         })
-        await audit.deleteAudit(row.id)
-        this.$message.success('删除成功')
-        this.getList()
+        const res = await audit.deleteAudit(row.id)
+        if (res && (res.code === 0 || res.code === undefined)) {
+          this.$message.success('删除成功')
+          this.getList()
+        } else {
+          this.$message.error(res?.message || '删除失败')
+        }
       } catch (error) {
         if (error !== 'cancel') {
           console.error('删除审核记录失败', error)
-          this.$message.error('删除失败')
+          const errorMsg = error?.message || '删除失败'
+          this.$message.error(errorMsg)
         }
       }
     },
     async handleApprove(row) {
       try {
+        if (!row || !row.id) {
+          this.$message.error('审核记录ID无效')
+          return
+        }
         await this.$confirm('是否确认通过该审核?', '提示', {
           confirmButtonText: '确定',
           cancelButtonText: '取消',
           type: 'success'
         })
-        await audit.approveAudit(row.id)
-        this.$message.success('审核通过')
-        this.detailVisible = false
-        this.getList()
+        const res = await audit.approveAudit(row.id)
+        if (res && (res.code === 0 || res.code === undefined)) {
+          this.$message.success('审核通过')
+          this.detailVisible = false
+          this.getList()
+        } else {
+          this.$message.error(res?.message || '操作失败')
+        }
       } catch (error) {
         if (error !== 'cancel') {
           console.error('审核通过失败', error)
-          this.$message.error('操作失败')
+          const errorMsg = error?.message || '操作失败'
+          this.$message.error(errorMsg)
         }
       }
     },
@@ -390,15 +431,29 @@ export default {
     async submitReject() {
       this.$refs.rejectForm.validate(async valid => {
         if (valid) {
+          if (!this.currentAudit || !this.currentAudit.id) {
+            this.$message.error('审核记录ID无效')
+            return
+          }
+          const reason = this.rejectForm.reason.trim()
+          if (!reason) {
+            this.$message.error('拒绝原因不能为空')
+            return
+          }
           this.submitLoading = true
           try {
-            await audit.rejectAudit(this.currentAudit.id, { reason: this.rejectForm.reason })
-            this.$message.success('已拒绝')
-            this.rejectVisible = false
-            this.getList()
+            const res = await audit.rejectAudit(this.currentAudit.id, { reason: reason })
+            if (res && (res.code === 0 || res.code === undefined)) {
+              this.$message.success('已拒绝')
+              this.rejectVisible = false
+              this.getList()
+            } else {
+              this.$message.error(res?.message || '操作失败')
+            }
           } catch (error) {
             console.error('拒绝审核失败', error)
-            this.$message.error('操作失败')
+            const errorMsg = error?.message || '操作失败'
+            this.$message.error(errorMsg)
           } finally {
             this.submitLoading = false
           }
@@ -408,15 +463,24 @@ export default {
     async submitForm() {
       this.$refs.form.validate(async valid => {
         if (valid) {
+          if (!this.form || !this.form.id) {
+            this.$message.error('审核记录ID无效')
+            return
+          }
           this.submitLoading = true
           try {
-            await audit.updateAudit(this.form.id, this.form)
-            this.$message.success('修改成功')
-            this.dialogVisible = false
-            this.getList()
+            const res = await audit.updateAudit(this.form.id, this.form)
+            if (res && (res.code === 0 || res.code === undefined)) {
+              this.$message.success('修改成功')
+              this.dialogVisible = false
+              this.getList()
+            } else {
+              this.$message.error(res?.message || '修改失败')
+            }
           } catch (error) {
             console.error('修改审核记录失败', error)
-            this.$message.error('修改失败')
+            const errorMsg = error?.message || '修改失败'
+            this.$message.error(errorMsg)
           } finally {
             this.submitLoading = false
           }
