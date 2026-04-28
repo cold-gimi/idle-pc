@@ -39,6 +39,26 @@ const routes = [
         name: 'Product',
         component: () => import('@/views/Product/index.vue'),
         meta: { title: '商品列表', icon: 'el-icon-goods', roles: ['admin'] }
+      },
+      {
+        path: 'permission',
+        name: 'Permission',
+        redirect: '/permission/dictionary',
+        meta: { title: '功能权限中心', icon: 'el-icon-s-tools', roles: ['admin'] },
+        children: [
+          {
+            path: 'dictionary',
+            name: 'Dictionary',
+            component: () => import('@/views/Dictionary/index.vue'),
+            meta: { title: '数据字典管理', icon: 'el-icon-notebook-2', roles: ['admin'] }
+          },
+          {
+            path: 'dictionary/detail/:dictKey',
+            name: 'DictionaryDetail',
+            component: () => import('@/views/Dictionary/detail.vue'),
+            meta: { title: '字典详情', icon: 'el-icon-notebook-2', roles: ['admin'], activeMenu: '/permission/dictionary' }
+          }
+        ]
       }
     ]
   }

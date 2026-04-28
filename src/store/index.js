@@ -31,6 +31,22 @@ const allMenuList = [
     path: '/product',
     icon: 'el-icon-goods',
     roles: ['admin']
+  },
+  {
+    id: 5,
+    name: '功能权限中心',
+    path: '/permission',
+    icon: 'el-icon-s-tools',
+    roles: ['admin'],
+    children: [
+      {
+        id: 51,
+        name: '数据字典管理',
+        path: '/permission/dictionary',
+        icon: 'el-icon-notebook-2',
+        roles: ['admin']
+      }
+    ]
   }
 ]
 
@@ -58,7 +74,20 @@ export default new Vuex.Store({
     sidebar: state => state.sidebar,
     menuList: state => {
       const userRole = state.userInfo.role || 'user'
-      return allMenuList.filter(menu => menu.roles.includes(userRole))
+      return allMenuList.reduce((acc, menu) => {
+        if (!menu.roles.includes(userRole)) {
+          return acc
+        }
+        const newMenu = { ...menu }
+        if (newMenu.children && newMenu.children.length > 0) {
+          newMenu.children = newMenu.children.filter(child => child.roles.includes(userRole))
+          if (newMenu.children.length === 0) {
+            return acc
+          }
+        }
+        acc.push(newMenu)
+        return acc
+      }, [])
     },
     isAdmin: state => {
       return state.userInfo.role === 'admin'

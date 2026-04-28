@@ -18,14 +18,34 @@
           :active-text-color="sidebarActiveColor"
           router
         >
-          <el-menu-item
-            v-for="menu in menuList"
-            :key="menu.id"
-            :index="menu.path"
-          >
-            <i :class="menu.icon"></i>
-            <span slot="title">{{ menu.name }}</span>
-          </el-menu-item>
+          <template v-for="menu in menuList">
+            <el-submenu
+              v-if="menu.children && menu.children.length > 0"
+              :key="menu.id"
+              :index="menu.path"
+            >
+              <template slot="title">
+                <i :class="menu.icon"></i>
+                <span>{{ menu.name }}</span>
+              </template>
+              <el-menu-item
+                v-for="child in menu.children"
+                :key="child.id"
+                :index="child.path"
+              >
+                <i :class="child.icon"></i>
+                <span slot="title">{{ child.name }}</span>
+              </el-menu-item>
+            </el-submenu>
+            <el-menu-item
+              v-else
+              :key="menu.id"
+              :index="menu.path"
+            >
+              <i :class="menu.icon"></i>
+              <span slot="title">{{ menu.name }}</span>
+            </el-menu-item>
+          </template>
         </el-menu>
       </el-aside>
       <el-container>
@@ -64,7 +84,7 @@
                   @click="navigateToMenu(menu)"
                 >
                   <i :class="menu.icon"></i>
-                  <span>{{ menu.name }}</span>
+                  <span>{{ menu.title || menu.name }}</span>
                 </div>
               </div>
             </div>
@@ -118,14 +138,34 @@
             router
             class="top-nav-menu"
           >
-            <el-menu-item
-              v-for="menu in menuList"
-              :key="menu.id"
-              :index="menu.path"
-            >
-              <i :class="menu.icon"></i>
-              <span>{{ menu.name }}</span>
-            </el-menu-item>
+            <template v-for="menu in menuList">
+              <el-submenu
+                v-if="menu.children && menu.children.length > 0"
+                :key="menu.id"
+                :index="menu.path"
+              >
+                <template slot="title">
+                  <i :class="menu.icon"></i>
+                  <span>{{ menu.name }}</span>
+                </template>
+                <el-menu-item
+                  v-for="child in menu.children"
+                  :key="child.id"
+                  :index="child.path"
+                >
+                  <i :class="child.icon"></i>
+                  <span slot="title">{{ child.name }}</span>
+                </el-menu-item>
+              </el-submenu>
+              <el-menu-item
+                v-else
+                :key="menu.id"
+                :index="menu.path"
+              >
+                <i :class="menu.icon"></i>
+                <span>{{ menu.name }}</span>
+              </el-menu-item>
+            </template>
           </el-menu>
         </div>
         <div class="top-nav-right">
@@ -147,7 +187,7 @@
                 @click="navigateToMenu(menu)"
               >
                 <i :class="menu.icon"></i>
-                <span>{{ menu.name }}</span>
+                <span>{{ menu.title || menu.name }}</span>
               </div>
             </div>
           </div>
@@ -454,9 +494,20 @@ export default {
         return
       }
       const keyword = this.headerSearchKeyword.toLowerCase()
-      this.filteredMenuList = this.menuList.filter(menu =>
-        menu.name.toLowerCase().includes(keyword)
-      )
+      const allMenus = []
+      this.menuList.forEach(menu => {
+        if (menu.name.toLowerCase().includes(keyword)) {
+          allMenus.push({ ...menu, title: menu.name })
+        }
+        if (menu.children && menu.children.length > 0) {
+          menu.children.forEach(child => {
+            if (child.name.toLowerCase().includes(keyword)) {
+              allMenus.push({ ...child, title: `${menu.name} > ${child.name}` })
+            }
+          })
+        }
+      })
+      this.filteredMenuList = allMenus
       this.showSearchResults = true
     },
     navigateToMenu(menu) {
