@@ -1,5 +1,6 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
+import request from '@/utils/request'
 
 Vue.use(Vuex)
 
@@ -158,19 +159,23 @@ export default new Vuex.Store({
   actions: {
     login({ commit }, userInfo) {
       return new Promise((resolve, reject) => {
-        setTimeout(() => {
-          localStorage.removeItem('token')
-          localStorage.removeItem('userInfo')
-          const token = 'mock-token-' + Date.now()
-          const role = userInfo.username === 'admin' ? 'admin' : 'user'
-          const userInfoWithRole = {
-            ...userInfo,
-            role
-          }
-          commit('SET_TOKEN', token)
-          commit('SET_USER_INFO', userInfoWithRole)
-          resolve()
-        }, 500)
+        request.post('/auth/login', {
+          username: userInfo.username,
+          password: userInfo.password
+        })
+          .then(res => {
+            const token = res.token || res.data?.token
+            const userInfoWithRole = {
+              username: userInfo.username,
+              role: res.role || res.data?.role || (userInfo.username === 'admin' ? 'admin' : 'user')
+            }
+            commit('SET_TOKEN', token)
+            commit('SET_USER_INFO', userInfoWithRole)
+            resolve(res)
+          })
+          .catch(error => {
+            reject(error)
+          })
       })
     },
     logout({ commit }) {
