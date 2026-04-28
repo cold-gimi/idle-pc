@@ -3,7 +3,7 @@
     <div class="page-header">
       <h3 class="page-title">商品列表</h3>
       <div class="header-buttons">
-        <el-button type="primary" icon="el-icon-plus" @click="handleAdd">新增商品</el-button>
+        <el-button type="primary" icon="el-icon-plus" @click="handleAdd" :loading="addLoading">新增商品</el-button>
       </div>
     </div>
 
@@ -42,7 +42,7 @@
         </el-select>
       </div>
       <div class="filter-item">
-        <el-button type="primary" icon="el-icon-search" @click="handleQuery">搜索</el-button>
+        <el-button type="primary" icon="el-icon-search" @click="handleQuery" :loading="searchLoading">搜索</el-button>
         <el-button icon="el-icon-refresh" @click="resetQuery">重置</el-button>
       </div>
     </div>
@@ -99,10 +99,11 @@
               size="small"
               :class="scope.row.status === 'on' ? 'text-orange' : 'text-green'"
               @click="handleToggleStatus(scope.row)"
+              :loading="scope.row._toggleLoading"
             >
               {{ scope.row.status === 'on' ? '下架' : '上架' }}
             </el-button>
-            <el-button type="text" size="small" class="text-red" @click="handleDelete(scope.row)">删除</el-button>
+            <el-button type="text" size="small" class="text-red" @click="handleDelete(scope.row)" :loading="scope.row._deleteLoading">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -160,8 +161,6 @@
         <el-form-item label="交易方式" prop="tradeMethod">
           <el-radio-group v-model="form.tradeMethod">
             <el-radio label="pickup">自提</el-radio>
-            <el-radio label="shipping">邮寄</el-radio>
-            <el-radio label="both">自提+邮寄</el-radio>
           </el-radio-group>
         </el-form-item>
         <el-form-item label="位置" prop="location">
@@ -178,7 +177,9 @@
             list-type="picture-card"
             :on-exceed="handleUploadExceed"
             :before-upload="beforeUpload"
+            :headers="uploadHeaders"
             accept="image/*"
+            :disabled="uploadLoading"
           >
             <i class="el-icon-plus"></i>
             <div class="el-upload__tip" slot="tip">最多上传9张图片</div>
@@ -200,7 +201,7 @@
         </el-form-item>
       </el-form>
       <div slot="footer" class="dialog-footer">
-        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button @click="dialogVisible = false" :disabled="submitLoading">取消</el-button>
         <el-button type="primary" @click="submitForm" :loading="submitLoading">确定</el-button>
       </div>
     </el-dialog>
@@ -244,12 +245,17 @@
 </template>
 
 <script>
+import { getProductList, createProduct, updateProduct, deleteProduct, toggleProductStatus, uploadImage } from '@/api/product'
+
 export default {
   name: 'Product',
   data() {
     return {
       loading: false,
       submitLoading: false,
+      addLoading: false,
+      searchLoading: false,
+      uploadLoading: false,
       total: 0,
       queryParams: {
         pageNum: 1,
@@ -280,11 +286,12 @@ export default {
         { label: '7成新及以下', value: 'poor' }
       ],
       tradeMethodOptions: [
-        { label: '自提', value: 'pickup' },
-        { label: '邮寄', value: 'shipping' },
-        { label: '自提+邮寄', value: 'both' }
+        { label: '自提', value: 'pickup' }
       ],
-      uploadAction: '/api/upload',
+      uploadAction: 'http://localhost:3000/api/v1/upload',
+      uploadHeaders: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
       dialogVisible: false,
       dialogTitle: '',
       isAdd: false,
@@ -329,45 +336,17 @@ export default {
     this.getList()
   },
   methods: {
-    getList() {
+    async getList() {
       this.loading = true
-      setTimeout(() => {
-        const mockData = [
-          { id: 1, name: 'iPhone 13 Pro Max 256G 远峰蓝', category: '手机数码', price: 6999, condition: 'excellent', tradeMethod: 'both', location: '北京市朝阳区', images: ['https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=iPhone%2013%20Pro%20Max%20smartphone%20blue%20color%20product%20photo&image_size=square_hd', 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=iPhone%20back%20view%20camera%20detail%20close%20up&image_size=square_hd'], status: 'on', createTime: '2024-04-25 10:30:00', description: '95新，使用一年，无磕碰，电池健康度92%' },
-          { id: 2, name: 'MacBook Pro 14寸 M1 Pro', category: '电子产品', price: 12999, condition: 'new', tradeMethod: 'pickup', location: '上海市浦东新区', images: ['https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=MacBook%20Pro%2014%20inch%20laptop%20silver%20product%20photo&image_size=square_hd'], status: 'off', createTime: '2024-04-24 15:20:00', description: '全新未拆封，公司奖品，低价出' },
-          { id: 3, name: '索尼 WH-1000XM4 无线耳机', category: '电子产品', price: 1299, condition: 'like_new', tradeMethod: 'both', location: '广州市天河区', images: ['https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=Sony%20WH-1000XM4%20wireless%20headphones%20black%20product%20photo&image_size=square_hd'], status: 'on', createTime: '2024-04-23 09:15:00', description: '99新，配件齐全，音质超好' },
-          { id: 4, name: 'iPad Pro 11寸 2021款', category: '电子产品', price: 4999, condition: 'good', tradeMethod: 'shipping', location: '深圳市南山区', images: ['https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=iPad%20Pro%2011%20inch%20tablet%20silver%20product%20photo&image_size=square_hd'], status: 'on', createTime: '2024-04-22 14:45:00', description: '8成新，屏幕有轻微划痕' },
-          { id: 5, name: '任天堂 Switch OLED', category: '电子产品', price: 2299, condition: 'excellent', tradeMethod: 'both', location: '杭州市西湖区', images: ['https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=Nintendo%20Switch%20OLED%20white%20gaming%20console%20product%20photo&image_size=square_hd'], status: 'off', createTime: '2024-04-21 11:30:00', description: '95新，带三个游戏卡带' },
-          { id: 6, name: '戴森 V15 无线吸尘器', category: '家用电器', price: 3999, condition: 'new', tradeMethod: 'pickup', location: '成都市武侯区', images: ['https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=Dyson%20V15%20wireless%20vacuum%20cleaner%20product%20photo&image_size=square_hd'], status: 'on', createTime: '2024-04-20 16:45:00', description: '全新未拆封，官网购买' },
-          { id: 7, name: '华为 Mate 40 Pro', category: '手机数码', price: 4599, condition: 'good', tradeMethod: 'both', location: '南京市鼓楼区', images: ['https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=Huawei%20Mate%2040%20Pro%20smartphone%20black%20product%20photo&image_size=square_hd'], status: 'on', createTime: '2024-04-19 08:30:00', description: '9成新，使用半年' },
-          { id: 8, name: 'AirPods Pro 2', category: '电子产品', price: 1399, condition: 'like_new', tradeMethod: 'shipping', location: '武汉市江汉区', images: ['https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=AirPods%20Pro%202%20wireless%20earbuds%20white%20product%20photo&image_size=square_hd'], status: 'on', createTime: '2024-04-18 13:20:00', description: '99新，国行正品' },
-          { id: 9, name: '机械键盘 樱桃红轴', category: '电子产品', price: 599, condition: 'fair', tradeMethod: 'both', location: '重庆市渝中区', images: ['https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=Mechanical%20keyboard%20Cherry%20MX%20Red%20switches%20product%20photo&image_size=square_hd'], status: 'off', createTime: '2024-04-17 09:45:00', description: '8成新，按键正常' },
-          { id: 10, name: '小米手环 7 Pro', category: '电子产品', price: 299, condition: 'excellent', tradeMethod: 'pickup', location: '苏州市工业园区', images: ['https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=Xiaomi%20Mi%20Band%207%20Pro%20smart%20watch%20black%20product%20photo&image_size=square_hd'], status: 'on', createTime: '2024-04-16 14:10:00', description: '95新，功能正常' },
-          { id: 11, name: '耐克 Air Jordan 1 运动鞋', category: '运动户外', price: 899, condition: 'good', tradeMethod: 'both', location: '西安市雁塔区', images: ['https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=Nike%20Air%20Jordan%201%20sneakers%20shoes%20red%20black%20product%20photo&image_size=square_hd'], status: 'on', createTime: '2024-04-15 10:20:00', description: '42码，9成新，只穿过几次' },
-          { id: 12, name: '雅诗兰黛小棕瓶精华', category: '美妆护肤', price: 599, condition: 'new', tradeMethod: 'shipping', location: '郑州市金水区', images: ['https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=Estee%20Lauder%20Advanced%20Night%20Repair%20serum%20bottle%20product%20photo&image_size=square_hd'], status: 'on', createTime: '2024-04-14 16:30:00', description: '全新未拆封，专柜正品' }
-        ]
-
-        let filtered = mockData
-        if (this.queryParams.name) {
-          filtered = filtered.filter(item => item.name.includes(this.queryParams.name))
-        }
-        if (this.queryParams.category) {
-          filtered = filtered.filter(item => item.category === this.queryParams.category)
-        }
-        if (this.queryParams.condition) {
-          filtered = filtered.filter(item => item.condition === this.queryParams.condition)
-        }
-        if (this.queryParams.status) {
-          filtered = filtered.filter(item => item.status === this.queryParams.status)
-        }
-
-        const start = (this.queryParams.pageNum - 1) * this.queryParams.pageSize
-        const end = start + this.queryParams.pageSize
-        
-        this.productList = filtered.slice(start, end)
-        this.total = filtered.length
+      try {
+        const res = await getProductList(this.queryParams)
+        this.productList = res.data?.list || res.data || []
+        this.total = res.data?.total || this.productList.length
+      } catch (error) {
+        console.error('获取商品列表失败:', error)
+      } finally {
         this.loading = false
-      }, 500)
+      }
     },
     getStatusText(status) {
       const statusMap = {
@@ -414,8 +393,12 @@ export default {
       return tradeMethodMap[tradeMethod] || tradeMethod
     },
     handleQuery() {
+      if (this.searchLoading) return
+      this.searchLoading = true
       this.queryParams.pageNum = 1
-      this.getList()
+      this.getList().finally(() => {
+        this.searchLoading = false
+      })
     },
     resetQuery() {
       this.queryParams = {
@@ -442,6 +425,8 @@ export default {
       this.getList()
     },
     handleAdd() {
+      if (this.addLoading) return
+      this.addLoading = true
       this.isAdd = true
       this.dialogTitle = '新增商品'
       this.form = {
@@ -458,8 +443,9 @@ export default {
       }
       this.$nextTick(() => {
         this.$refs.form && this.$refs.form.resetFields()
+        this.addLoading = false
+        this.dialogVisible = true
       })
-      this.dialogVisible = true
     },
     handleEdit(row) {
       this.isAdd = false
@@ -479,51 +465,99 @@ export default {
       this.currentProduct = row
       this.detailVisible = true
     },
-    handleToggleStatus(row) {
+    async handleToggleStatus(row) {
+      if (row._toggleLoading) return
+      
       const newStatus = row.status === 'on' ? 'off' : 'on'
       const statusText = newStatus === 'on' ? '上架' : '下架'
-      this.$confirm(`是否确认${statusText}该商品?`, '提示', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }).then(() => {
+      
+      try {
+        await this.$confirm(`是否确认${statusText}该商品?`, '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        })
+        
+        this.$set(row, '_toggleLoading', true)
+        await toggleProductStatus(row.id, newStatus)
         row.status = newStatus
         this.$message.success(`${statusText}成功`)
         this.getList()
-      }).catch(() => {})
+      } catch (error) {
+        if (error !== 'cancel') {
+          console.error(`${statusText}失败:`, error)
+        }
+      } finally {
+        this.$set(row, '_toggleLoading', false)
+      }
     },
-    handleDelete(row) {
-      this.$confirm('是否确认删除该商品?', '警告', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }).then(() => {
+    async handleDelete(row) {
+      if (row._deleteLoading) return
+      
+      try {
+        await this.$confirm('是否确认删除该商品?', '警告', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        })
+        
+        this.$set(row, '_deleteLoading', true)
+        await deleteProduct(row.id)
         this.$message.success('删除成功')
         this.getList()
-      }).catch(() => {})
+      } catch (error) {
+        if (error !== 'cancel') {
+          console.error('删除失败:', error)
+        }
+      } finally {
+        this.$set(row, '_deleteLoading', false)
+      }
     },
-    submitForm() {
-      this.$refs.form.validate(valid => {
+    async submitForm() {
+      if (this.submitLoading) return
+      
+      this.$refs.form.validate(async valid => {
         if (valid) {
           this.submitLoading = true
-          setTimeout(() => {
+          try {
+            const submitData = {
+              ...this.form,
+              images: this.form.images.map(img => img.url || img)
+            }
+            
             if (this.isAdd) {
+              await createProduct(submitData)
               this.$message.success('新增成功')
             } else {
+              await updateProduct(this.form.id, submitData)
               this.$message.success('修改成功')
             }
             this.dialogVisible = false
-            this.submitLoading = false
             this.getList()
-          }, 500)
+          } catch (error) {
+            console.error('提交失败:', error)
+          } finally {
+            this.submitLoading = false
+          }
         }
       })
     },
     handleUploadSuccess(response, file, fileList) {
-      this.form.images = fileList.map(f => f.url || f.response?.url)
+      this.uploadLoading = false
+      const url = response.data?.url || response.url || file.response?.data?.url || file.response?.url
+      if (url) {
+        file.url = url
+      }
+      this.form.images = fileList.map(f => ({
+        name: f.name,
+        url: f.url || f.response?.data?.url || f.response?.url
+      }))
     },
     handleUploadRemove(file, fileList) {
-      this.form.images = fileList.map(f => f.url || f.response?.url)
+      this.form.images = fileList.map(f => ({
+        name: f.name,
+        url: f.url || f.response?.data?.url || f.response?.url
+      }))
     },
     handleUploadExceed(files, fileList) {
       this.$message.warning('最多只能上传9张图片')
@@ -539,6 +573,7 @@ export default {
         this.$message.error('图片大小不能超过 2MB!')
         return false
       }
+      this.uploadLoading = true
       return true
     }
   }
