@@ -173,7 +173,7 @@
 </template>
 
 <script>
-import request from '@/utils/request'
+import { audit } from '@/api'
 
 export default {
   name: 'Audit',
@@ -185,7 +185,7 @@ export default {
       activeTab: 'pending',
       dateRange: [],
       queryParams: {
-        page: 1,
+        pageNum: 1,
         pageSize: 10,
         title: '',
         status: 'pending',
@@ -242,16 +242,18 @@ export default {
       } else {
         this.queryParams.status = tab.name
       }
-      this.queryParams.page = 1
+      this.queryParams.pageNum = 1
       this.getList()
     },
     async getList() {
       this.loading = true
       try {
         const params = {
-          page: this.queryParams.page,
-          pageSize: this.queryParams.pageSize,
-          title: this.queryParams.title
+          pageNum: this.queryParams.pageNum,
+          pageSize: this.queryParams.pageSize
+        }
+        if (this.queryParams.title) {
+          params.title = this.queryParams.title
         }
         if (this.queryParams.status) {
           params.status = this.queryParams.status
@@ -263,11 +265,12 @@ export default {
           params.startDate = this.dateRange[0]
           params.endDate = this.dateRange[1]
         }
-        const res = await request.get('/audits', { params })
-        this.auditList = res.data.list
-        this.total = res.data.pagination.total
+        const res = await audit.getAuditList(params)
+        this.auditList = res.data?.list || res.data?.items || []
+        this.total = res.data?.pagination?.total || res.data?.total || 0
       } catch (error) {
         console.error('获取审核列表失败', error)
+        this.$message.error('获取审核列表失败')
       } finally {
         this.loading = false
       }
@@ -289,14 +292,14 @@ export default {
       return typeMap[status] || 'info'
     },
     handleQuery() {
-      this.queryParams.page = 1
+      this.queryParams.pageNum = 1
       this.getList()
     },
     resetQuery() {
       this.activeTab = 'pending'
       this.dateRange = []
       this.queryParams = {
-        page: 1,
+        pageNum: 1,
         pageSize: 10,
         title: '',
         status: 'pending',
@@ -309,21 +312,29 @@ export default {
       this.getList()
     },
     handleCurrentChange(val) {
-      this.queryParams.page = val
+      this.queryParams.pageNum = val
       this.getList()
     },
     async handleView(row) {
       try {
-        const res = await request.get(`/audits/${row.id}`)
-        this.currentAudit = res.data
+        const res = await audit.getAuditDetail(row.id)
+        this.currentAudit = res.data || {}
         this.detailVisible = true
       } catch (error) {
         console.error('获取审核详情失败', error)
+        this.$message.error('获取审核详情失败')
       }
     },
     handleEdit(row) {
       this.dialogTitle = '编辑审核'
-      this.form = Object.assign({}, row)
+      this.form = {
+        id: row.id,
+        title: row.title,
+        submitter: row.submitter,
+        type: row.type,
+        price: row.price,
+        description: row.description
+      }
       this.$nextTick(() => {
         this.$refs.form && this.$refs.form.clearValidate()
       })
@@ -336,12 +347,13 @@ export default {
           cancelButtonText: '取消',
           type: 'warning'
         })
-        await request.delete(`/audits/${row.id}`)
+        await audit.deleteAudit(row.id)
         this.$message.success('删除成功')
         this.getList()
       } catch (error) {
         if (error !== 'cancel') {
           console.error('删除审核记录失败', error)
+          this.$message.error('删除失败')
         }
       }
     },
@@ -352,13 +364,14 @@ export default {
           cancelButtonText: '取消',
           type: 'success'
         })
-        await request.put(`/audits/${row.id}/approve`)
+        await audit.approveAudit(row.id)
         this.$message.success('审核通过')
         this.detailVisible = false
         this.getList()
       } catch (error) {
         if (error !== 'cancel') {
           console.error('审核通过失败', error)
+          this.$message.error('操作失败')
         }
       }
     },
@@ -379,12 +392,13 @@ export default {
         if (valid) {
           this.submitLoading = true
           try {
-            await request.put(`/audits/${this.currentAudit.id}/reject`, { reason: this.rejectForm.reason })
+            await audit.rejectAudit(this.currentAudit.id, { reason: this.rejectForm.reason })
             this.$message.success('已拒绝')
             this.rejectVisible = false
             this.getList()
           } catch (error) {
             console.error('拒绝审核失败', error)
+            this.$message.error('操作失败')
           } finally {
             this.submitLoading = false
           }
@@ -396,12 +410,13 @@ export default {
         if (valid) {
           this.submitLoading = true
           try {
-            await request.put(`/audits/${this.form.id}`, this.form)
+            await audit.updateAudit(this.form.id, this.form)
             this.$message.success('修改成功')
             this.dialogVisible = false
             this.getList()
           } catch (error) {
             console.error('修改审核记录失败', error)
+            this.$message.error('修改失败')
           } finally {
             this.submitLoading = false
           }

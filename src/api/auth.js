@@ -1,7 +1,7 @@
 import request from '@/utils/request'
 import { mockLogin } from '@/mock/auth'
 
-const USE_MOCK = true
+const USE_MOCK = false
 
 export function login(data) {
   if (USE_MOCK) {
