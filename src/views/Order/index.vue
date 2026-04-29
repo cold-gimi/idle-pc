@@ -40,49 +40,61 @@
     </div>
 
     <div class="filter-container">
-      <div class="filter-row">
-        <div class="filter-item">
-          <span class="filter-label">时间范围：</span>
-          <el-date-picker
-            v-model="queryParams.dateRange"
-            type="daterange"
-            range-separator="至"
-            start-placeholder="开始日期"
-            end-placeholder="结束日期"
-            value-format="yyyy-MM-dd"
-            style="width: 240px;"
-          />
-        </div>
-        <div class="filter-item">
-          <span class="filter-label">订单状态：</span>
-          <el-select v-model="queryParams.status" placeholder="请选择状态" clearable style="width: 150px;">
-            <el-option label="待付款" value="pending" />
-            <el-option label="已付款" value="paid" />
-            <el-option label="已完成" value="completed" />
-            <el-option label="已退款" value="refunded" />
-            <el-option label="已取消" value="cancelled" />
-          </el-select>
-        </div>
-        <div class="filter-item">
-          <span class="filter-label">订单号：</span>
-          <el-input v-model="queryParams.orderNo" placeholder="请输入订单号" clearable style="width: 180px;" @keyup.enter.native="handleQuery" />
-        </div>
-      </div>
-      <div class="filter-row">
-        <div class="filter-item">
-          <span class="filter-label">商品名称：</span>
-          <el-input v-model="queryParams.productName" placeholder="请输入商品名称" clearable style="width: 180px;" @keyup.enter.native="handleQuery" />
-        </div>
-        <div class="filter-item">
-          <span class="filter-label">买家：</span>
-          <el-input v-model="queryParams.buyer" placeholder="请输入买家名称" clearable style="width: 180px;" @keyup.enter.native="handleQuery" />
-        </div>
-        <div class="filter-item">
-          <el-button type="primary" icon="el-icon-search" @click="handleQuery" :loading="searchLoading">搜索</el-button>
-          <el-button icon="el-icon-refresh" @click="resetQuery">重置</el-button>
-          <el-button type="success" icon="el-icon-download" @click="handleExport">导出Excel</el-button>
-        </div>
-      </div>
+      <el-row :gutter="20">
+        <el-col :span="8">
+          <div class="filter-item">
+            <span class="filter-label">时间范围：</span>
+            <el-date-picker
+              v-model="queryParams.dateRange"
+              type="daterange"
+              range-separator="至"
+              start-placeholder="开始日期"
+              end-placeholder="结束日期"
+              value-format="yyyy-MM-dd"
+              style="width: 100%;"
+            />
+          </div>
+        </el-col>
+        <el-col :span="8">
+          <div class="filter-item">
+            <span class="filter-label">订单状态：</span>
+            <el-select v-model="queryParams.status" placeholder="请选择状态" clearable>
+              <el-option label="待付款" value="pending" />
+              <el-option label="已付款" value="paid" />
+              <el-option label="已完成" value="completed" />
+              <el-option label="已退款" value="refunded" />
+              <el-option label="已取消" value="cancelled" />
+            </el-select>
+          </div>
+        </el-col>
+        <el-col :span="8">
+          <div class="filter-item">
+            <span class="filter-label">订单号：</span>
+            <el-input v-model="queryParams.orderNo" placeholder="请输入订单号" clearable @keyup.enter.native="handleQuery" />
+          </div>
+        </el-col>
+      </el-row>
+      <el-row :gutter="20" style="margin-top: 20px;">
+        <el-col :span="8">
+          <div class="filter-item">
+            <span class="filter-label">商品名称：</span>
+            <el-input v-model="queryParams.productName" placeholder="请输入商品名称" clearable @keyup.enter.native="handleQuery" />
+          </div>
+        </el-col>
+        <el-col :span="8">
+          <div class="filter-item">
+            <span class="filter-label">买家：</span>
+            <el-input v-model="queryParams.buyer" placeholder="请输入买家名称" clearable @keyup.enter.native="handleQuery" />
+          </div>
+        </el-col>
+        <el-col :span="8">
+          <div class="filter-item filter-buttons">
+            <el-button type="primary" icon="el-icon-search" @click="handleQuery" :loading="searchLoading">搜索</el-button>
+            <el-button icon="el-icon-refresh" @click="resetQuery">重置</el-button>
+            <el-button type="success" icon="el-icon-download" @click="handleExport">导出Excel</el-button>
+          </div>
+        </el-col>
+      </el-row>
     </div>
 
     <div class="tabs-container">
@@ -588,26 +600,21 @@ export default {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
 
-.filter-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
-.filter-row:last-child {
-  margin-bottom: 0;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-}
-
 .filter-item {
   display: flex;
   align-items: center;
-  margin-bottom: 0;
+  width: 100%;
 }
 
-.filter-item:last-child {
-  justify-content: flex-start;
+.filter-item .el-date-picker,
+.filter-item .el-select,
+.filter-item .el-input {
+  flex: 1;
+}
+
+.filter-buttons {
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .filter-label {
@@ -615,7 +622,10 @@ export default {
   color: #606266;
   margin-right: 8px;
   white-space: nowrap;
+  width: 70px;
+  min-width: 70px;
   font-weight: 500;
+  text-align: right;
 }
 
 .tabs-container {
