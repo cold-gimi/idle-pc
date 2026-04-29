@@ -1,13 +1,5 @@
 <template>
   <div class="page-container">
-    <div class="page-header">
-      <h3 class="page-title">评论管理</h3>
-      <div class="header-buttons">
-        <el-button type="danger" icon="el-icon-delete" @click="handleBatchDelete" :disabled="selectedItems.length === 0">
-          批量删除 ({{ selectedItems.length }})
-        </el-button>
-      </div>
-    </div>
 
     <div class="statistics-container">
       <el-row :gutter="20">
@@ -98,6 +90,12 @@
         </el-button>
       </template>
     </SearchForm>
+
+    <div class="table-actions">
+      <el-button type="danger" icon="el-icon-delete" @click="handleBatchDelete" :disabled="selectedItems.length === 0">
+        批量删除 ({{ selectedItems.length }})
+      </el-button>
+    </div>
 
     <DataTable
       :table-data="commentList"
@@ -823,8 +821,10 @@ export default {
   color: #e6a23c !important;
 }
 
-.header-buttons {
-  display: flex;
-  gap: 10px;
+.table-actions {
+  background: #fff;
+  padding: 16px 20px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  border-radius: 0;
 }
 </style>
