@@ -47,6 +47,12 @@ const routes = [
         meta: { title: '订单管理', icon: 'el-icon-s-order', roles: ['admin'] }
       },
       {
+        path: 'statistics',
+        name: 'Statistics',
+        component: () => import('@/views/Statistics/index.vue'),
+        meta: { title: '数据统计', icon: 'el-icon-data-analysis', roles: ['admin'] }
+      },
+      {
         path: 'permission',
         name: 'Permission',
         redirect: '/permission/dictionary',

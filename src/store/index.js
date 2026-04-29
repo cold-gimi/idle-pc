@@ -41,6 +41,13 @@ const allMenuList = [
     roles: ['admin']
   },
   {
+    id: 51,
+    name: '数据统计',
+    path: '/statistics',
+    icon: 'el-icon-data-analysis',
+    roles: ['admin']
+  },
+  {
     id: 6,
     name: '功能权限中心',
     path: '/permission',
