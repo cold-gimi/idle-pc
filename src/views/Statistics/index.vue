@@ -1,9 +1,5 @@
 <template>
   <div class="stats-page">
-    <div class="page-header">
-      <h3 class="page-title">数据统计</h3>
-    </div>
-
     <div class="stats-cards-section">
       <div class="stats-cards-grid">
         <div class="stat-card card-gradient-1" @mouseenter="onCardHover(0)" @mouseleave="onCardLeave(0)">
@@ -112,7 +108,7 @@
 
     <div class="charts-section">
       <el-row :gutter="20">
-        <el-col :span="16">
+        <el-col :span="12">
           <el-card class="chart-card" shadow="hover">
             <div slot="header" class="chart-header">
               <span class="chart-title">发布量与成交量趋势</span>
@@ -140,7 +136,7 @@
           </el-card>
         </el-col>
 
-        <el-col :span="8">
+        <el-col :span="12">
           <el-card class="chart-card" shadow="hover">
             <div slot="header" class="chart-header">
               <span class="chart-title">商品分类发布 TOP5</span>
@@ -159,54 +155,29 @@
     </div>
 
     <div class="bottom-section" style="margin-top: 20px;">
-      <el-row :gutter="20">
-        <el-col :span="12">
-          <el-card class="chart-card" shadow="hover">
-            <div slot="header" class="chart-header">
-              <span class="chart-title">月度成交额走势</span>
-            </div>
-            <div ref="monthlyChart" class="chart-container"></div>
-          </el-card>
-        </el-col>
-
-        <el-col :span="12">
-          <el-card class="chart-card" shadow="hover">
-            <div slot="header" class="chart-header">
-              <span class="chart-title">用户行为数据</span>
-            </div>
-            <div class="behavior-table-container">
-              <el-table :data="behaviorData" style="width: 100%" :header-cell-style="{ backgroundColor: '#f8fafc', color: '#606266' }">
-                <el-table-column prop="month" label="月份" width="100"></el-table-column>
-                <el-table-column prop="activeUsers" label="活跃用户">
-                  <template slot-scope="scope">
-                    <span class="number-highlight">{{ scope.row.activeUsers }}</span>
-                  </template>
-                </el-table-column>
-                <el-table-column prop="pageViews" label="页面浏览量">
-                  <template slot-scope="scope">
-                    <span class="number-highlight">{{ scope.row.pageViews }}</span>
-                  </template>
-                </el-table-column>
-                <el-table-column prop="conversionRate" label="转化率">
-                  <template slot-scope="scope">
-                    <span :class="scope.row.conversionRate >= 3 ? 'trend-up' : 'trend-down'">
-                      {{ scope.row.conversionRate }}%
-                    </span>
-                  </template>
-                </el-table-column>
-                <el-table-column prop="mom" label="环比">
-                  <template slot-scope="scope">
-                    <div class="mom-badge" :class="scope.row.mom >= 0 ? 'mom-up' : 'mom-down'">
-                      <i :class="scope.row.mom >= 0 ? 'el-icon-arrow-up' : 'el-icon-arrow-down'"></i>
-                      {{ Math.abs(scope.row.mom) }}%
-                    </div>
-                  </template>
-                </el-table-column>
-              </el-table>
-            </div>
-          </el-card>
-        </el-col>
-      </el-row>
+      <el-card class="chart-card" shadow="hover">
+        <div slot="header" class="chart-header">
+          <span class="chart-title">月度成交额走势</span>
+        </div>
+        <div class="monthly-table-container">
+          <el-table :data="monthlyData" style="width: 100%" :header-cell-style="{ backgroundColor: '#f8fafc', color: '#606266' }">
+            <el-table-column prop="month" label="月份" width="120" align="center"></el-table-column>
+            <el-table-column prop="amount" label="成交额" align="center">
+              <template slot-scope="scope">
+                <span class="number-highlight">¥{{ scope.row.amount.toLocaleString() }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="mom" label="环比" align="center">
+              <template slot-scope="scope">
+                <div class="mom-badge" :class="scope.row.mom >= 0 ? 'mom-up' : 'mom-down'">
+                  <i :class="scope.row.mom >= 0 ? 'el-icon-arrow-up' : 'el-icon-arrow-down'"></i>
+                  {{ Math.abs(scope.row.mom) }}%
+                </div>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+      </el-card>
     </div>
   </div>
 </template>
@@ -231,15 +202,14 @@ export default {
       lineChart: null,
       barChart1: null,
       barChart2: null,
-      monthlyChart: null,
       hoveredCardIndex: -1,
-      behaviorData: [
-        { month: '1月', activeUsers: 12580, pageViews: 45890, conversionRate: 3.2, mom: 2.5 },
-        { month: '2月', activeUsers: 14260, pageViews: 52340, conversionRate: 3.5, mom: 4.2 },
-        { month: '3月', activeUsers: 16890, pageViews: 68720, conversionRate: 4.1, mom: 8.6 },
-        { month: '4月', activeUsers: 18920, pageViews: 75430, conversionRate: 3.8, mom: -1.2 },
-        { month: '5月', activeUsers: 21450, pageViews: 89650, conversionRate: 4.5, mom: 6.3 },
-        { month: '6月', activeUsers: 23890, pageViews: 98760, conversionRate: 4.8, mom: 3.1 }
+      monthlyData: [
+        { month: '1月', amount: 125800, mom: 2.5 },
+        { month: '2月', amount: 186500, mom: 4.2 },
+        { month: '3月', amount: 258900, mom: 8.6 },
+        { month: '4月', amount: 325600, mom: -1.2 },
+        { month: '5月', amount: 389200, mom: 6.3 },
+        { month: '6月', amount: 456800, mom: 3.1 }
       ]
     }
   },
@@ -254,7 +224,6 @@ export default {
     if (this.lineChart) this.lineChart.dispose()
     if (this.barChart1) this.barChart1.dispose()
     if (this.barChart2) this.barChart2.dispose()
-    if (this.monthlyChart) this.monthlyChart.dispose()
   },
   methods: {
     getTrendClass(trend) {
@@ -279,13 +248,11 @@ export default {
       if (this.lineChart) this.lineChart.resize()
       if (this.barChart1) this.barChart1.resize()
       if (this.barChart2) this.barChart2.resize()
-      if (this.monthlyChart) this.monthlyChart.resize()
     },
     initCharts() {
       this.initLineChart()
       this.initBarChart1()
       this.initBarChart2()
-      this.initMonthlyChart()
     },
     initLineChart() {
       const chartDom = this.$refs.lineChart
@@ -603,146 +570,6 @@ export default {
       
       this.barChart2.setOption(option)
     },
-    initMonthlyChart() {
-      const chartDom = this.$refs.monthlyChart
-      if (!chartDom) return
-      
-      this.monthlyChart = echarts.init(chartDom)
-      
-      const months = ['1月', '2月', '3月', '4月', '5月', '6月']
-      const amounts = [125800, 186500, 258900, 325600, 389200, 456800]
-      const momData = [2.5, 4.2, 8.6, -1.2, 6.3, 3.1]
-      
-      const option = {
-        tooltip: {
-          trigger: 'axis',
-          axisPointer: {
-            type: 'cross'
-          },
-          formatter: function(params) {
-            let result = params[0].axisValue + '<br/>'
-            params.forEach(param => {
-              if (param.seriesName === '成交额') {
-                result += `${param.marker} ${param.seriesName}: ¥${param.value.toLocaleString()}<br/>`
-              } else {
-                const icon = param.value >= 0 ? '↑' : '↓'
-                result += `${param.marker} ${param.seriesName}: ${icon}${Math.abs(param.value)}%<br/>`
-              }
-            })
-            return result
-          }
-        },
-        legend: {
-          data: ['成交额', '环比'],
-          top: 0,
-          textStyle: {
-            color: '#606266'
-          }
-        },
-        grid: {
-          left: '3%',
-          right: '4%',
-          bottom: '3%',
-          top: '15%',
-          containLabel: true
-        },
-        xAxis: {
-          type: 'category',
-          data: months,
-          axisLine: {
-            lineStyle: {
-              color: '#dcdfe6'
-            }
-          },
-          axisLabel: {
-            color: '#909399'
-          }
-        },
-        yAxis: [
-          {
-            type: 'value',
-            name: '成交额',
-            axisLine: {
-              show: false
-            },
-            axisTick: {
-              show: false
-            },
-            splitLine: {
-              lineStyle: {
-                color: '#f0f2f5',
-                type: 'dashed'
-              }
-            },
-            axisLabel: {
-              color: '#909399',
-              formatter: function(value) {
-                return (value / 10000) + '万'
-              }
-            }
-          },
-          {
-            type: 'value',
-            name: '环比',
-            axisLine: {
-              show: false
-            },
-            axisTick: {
-              show: false
-            },
-            splitLine: {
-              show: false
-            },
-            axisLabel: {
-              color: '#909399',
-              formatter: '{value}%'
-            }
-          }
-        ],
-        series: [
-          {
-            name: '成交额',
-            type: 'bar',
-            barWidth: '35%',
-            itemStyle: {
-              borderRadius: [8, 8, 0, 0],
-              color: {
-                type: 'linear',
-                x: 0,
-                y: 1,
-                x2: 0,
-                y2: 0,
-                colorStops: [
-                  { offset: 0, color: '#667eea' },
-                  { offset: 1, color: '#764ba2' }
-                ]
-              }
-            },
-            data: amounts
-          },
-          {
-            name: '环比',
-            type: 'line',
-            yAxisIndex: 1,
-            smooth: true,
-            symbol: 'diamond',
-            symbolSize: 8,
-            lineStyle: {
-              width: 2,
-              color: '#f5576c'
-            },
-            itemStyle: {
-              color: function(params) {
-                return params.value >= 0 ? '#67c23a' : '#f56c6c'
-              }
-            },
-            data: momData
-          }
-        ]
-      }
-      
-      this.monthlyChart.setOption(option)
-    },
     generateDateLabels(count) {
       const labels = []
       const now = new Date()
@@ -776,17 +603,6 @@ export default {
   padding: 20px;
   background-color: #f5f7fa;
   min-height: calc(100vh - 80px);
-}
-
-.page-header {
-  margin-bottom: 20px;
-}
-
-.page-title {
-  font-size: 20px;
-  font-weight: 600;
-  color: #303133;
-  margin: 0;
 }
 
 .stats-cards-section {
@@ -956,31 +772,27 @@ export default {
   height: 220px;
 }
 
-#monthlyChart {
-  height: 300px;
-}
-
-.behavior-table-container {
+.monthly-table-container {
   max-height: 300px;
   overflow-y: auto;
 }
 
-.behavior-table-container ::v-deep .el-table th {
+.monthly-table-container ::v-deep .el-table th {
   background-color: #f8fafc;
   font-weight: 600;
   color: #303133;
   padding: 14px 0;
 }
 
-.behavior-table-container ::v-deep .el-table td {
+.monthly-table-container ::v-deep .el-table td {
   padding: 14px 0;
 }
 
-.behavior-table-container ::v-deep .el-table--striped .el-table__body tr.el-table__row--striped td {
+.monthly-table-container ::v-deep .el-table--striped .el-table__body tr.el-table__row--striped td {
   background: #fafbfc;
 }
 
-.behavior-table-container ::v-deep .el-table__row:hover > td {
+.monthly-table-container ::v-deep .el-table__row:hover > td {
   background-color: #f5f7fa !important;
 }
 
