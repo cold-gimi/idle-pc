@@ -65,6 +65,12 @@ const routes = [
         meta: { title: '评论管理', icon: 'el-icon-chat-dot-round', roles: ['admin'] }
       },
       {
+        path: 'member',
+        name: 'Member',
+        component: () => import('@/views/Member/index.vue'),
+        meta: { title: '会员管理', icon: 'el-icon-user', roles: ['admin'] }
+      },
+      {
         path: 'permission',
         name: 'Permission',
         redirect: '/permission/dictionary',

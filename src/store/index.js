@@ -62,6 +62,13 @@ const allMenuList = [
     roles: ['admin']
   },
   {
+    id: 54,
+    name: '会员管理',
+    path: '/member',
+    icon: 'el-icon-user',
+    roles: ['admin']
+  },
+  {
     id: 6,
     name: '功能权限中心',
     path: '/permission',
