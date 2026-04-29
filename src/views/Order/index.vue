@@ -90,13 +90,12 @@
       :default-status-type-map="statusTypeMap"
       @size-change="handleSizeChange"
       @current-change="handleCurrentChange"
-      @action-click="onActionClick"
     >
       <template #amount="{ row }">
         <span class="amount-text">¥{{ row.amount }}</span>
       </template>
       <template #actions="{ row }">
-        <el-button type="text" size="small" @click="handleDetail(row)">详情</el-button>
+        <el-button type="text" size="small" @click="handleOrderDetail(row)">详情</el-button>
         <template v-if="row.status === 'pending'">
           <el-button type="text" size="small" class="text-orange" @click="handleCancel(row)">取消订单</el-button>
         </template>
@@ -114,7 +113,7 @@
       </template>
     </DataTable>
 
-    <el-dialog title="订单详情" :visible.sync="detailVisible" width="700px" :close-on-click-modal="false">
+    <el-dialog title="订单详情" :visible.sync="orderDetailVisible" width="700px" :close-on-click-modal="false">
       <el-descriptions :column="2" border size="small">
         <el-descriptions-item label="订单号">{{ currentOrder.orderNo }}</el-descriptions-item>
         <el-descriptions-item label="订单状态">
@@ -131,7 +130,7 @@
         <el-descriptions-item label="订单备注" :span="2">{{ currentOrder.remark || '无' }}</el-descriptions-item>
       </el-descriptions>
       <div slot="footer" class="dialog-footer">
-        <el-button @click="detailVisible = false">关闭</el-button>
+        <el-button @click="orderDetailVisible = false">关闭</el-button>
       </div>
     </el-dialog>
 
@@ -171,90 +170,11 @@
         <el-button type="primary" @click="confirmRefund" :loading="submitLoading">提交</el-button>
       </div>
     </el-dialog>
-
-    <div class="charts-section" style="margin-top: 20px;">
-      <el-row :gutter="20">
-        <el-col :span="12">
-          <el-card class="chart-card" shadow="hover">
-            <div slot="header" class="chart-header">
-              <span class="chart-title">商品分类发布 TOP5</span>
-            </div>
-            <div ref="barChart1" class="chart-container"></div>
-          </el-card>
-        </el-col>
-
-        <el-col :span="12">
-          <el-card class="chart-card" shadow="hover">
-            <div slot="header" class="chart-header">
-              <span class="chart-title">用户地区分布 TOP5</span>
-            </div>
-            <div ref="barChart2" class="chart-container"></div>
-          </el-card>
-        </el-col>
-      </el-row>
-    </div>
-
-    <div class="tables-section" style="margin-top: 20px;">
-      <el-row :gutter="20">
-        <el-col :span="12">
-          <el-card class="chart-card" shadow="hover">
-            <div slot="header" class="chart-header">
-              <span class="chart-title">月度成交额走势</span>
-            </div>
-            <div class="table-wrapper">
-              <el-table :data="monthlyAmountData" style="width: 100%" :header-cell-style="{ backgroundColor: '#f8fafc', color: '#606266' }">
-                <el-table-column prop="month" label="月份" width="120" align="center"></el-table-column>
-                <el-table-column prop="amount" label="成交额" align="center">
-                  <template slot-scope="scope">
-                    <span class="number-highlight">¥{{ scope.row.amount.toLocaleString() }}</span>
-                  </template>
-                </el-table-column>
-                <el-table-column prop="mom" label="环比" align="center">
-                  <template slot-scope="scope">
-                    <div class="mom-badge" :class="scope.row.mom >= 0 ? 'mom-up' : 'mom-down'">
-                      <i :class="scope.row.mom >= 0 ? 'el-icon-arrow-up' : 'el-icon-arrow-down'"></i>
-                      {{ Math.abs(scope.row.mom) }}%
-                    </div>
-                  </template>
-                </el-table-column>
-              </el-table>
-            </div>
-          </el-card>
-        </el-col>
-
-        <el-col :span="12">
-          <el-card class="chart-card" shadow="hover">
-            <div slot="header" class="chart-header">
-              <span class="chart-title">用户行为数据</span>
-            </div>
-            <div class="table-wrapper">
-              <el-table :data="userBehaviorData" style="width: 100%" :header-cell-style="{ backgroundColor: '#f8fafc', color: '#606266' }">
-                <el-table-column prop="action" label="行为类型" width="150" align="center"></el-table-column>
-                <el-table-column prop="count" label="数量" align="center">
-                  <template slot-scope="scope">
-                    <span class="number-highlight">{{ scope.row.count.toLocaleString() }}</span>
-                  </template>
-                </el-table-column>
-                <el-table-column prop="ratio" label="占比" align="center">
-                  <template slot-scope="scope">
-                    <div class="ratio-bar">
-                      <div class="ratio-fill" :style="{ width: scope.row.ratio + '%' }"></div>
-                      <span class="ratio-text">{{ scope.row.ratio }}%</span>
-                    </div>
-                  </template>
-                </el-table-column>
-              </el-table>
-            </div>
-          </el-card>
-        </el-col>
-      </el-row>
-    </div>
   </div>
 </template>
 
 <script>
 import * as XLSX from 'xlsx';
-import * as echarts from 'echarts';
 import listPageMixin from '@/mixins/listPage';
 import { SearchForm, DataTable } from '@/components';
 
@@ -300,26 +220,11 @@ export default {
         cancelled: 'info'
       },
       currentOrder: {},
+      orderDetailVisible: false,
       cancelVisible: false,
       cancelReason: '',
       refundAmount: 0,
-      refundReason: '',
-      barChart1: null,
-      barChart2: null,
-      monthlyAmountData: [
-        { month: '1月', amount: 125800, mom: 2.5 },
-        { month: '2月', amount: 186500, mom: 4.2 },
-        { month: '3月', amount: 258900, mom: 8.6 },
-        { month: '4月', amount: 325600, mom: -1.2 },
-        { month: '5月', amount: 389200, mom: 6.3 },
-        { month: '6月', amount: 456800, mom: 3.1 }
-      ],
-      userBehaviorData: [
-        { action: '浏览商品', count: 12568, ratio: 45 },
-        { action: '加入购物车', count: 8956, ratio: 32 },
-        { action: '提交订单', count: 4523, ratio: 16 },
-        { action: '完成支付', count: 2156, ratio: 7 }
-      ]
+      refundReason: ''
     }
   },
   computed: {
@@ -417,17 +322,6 @@ export default {
   created() {
     this.initPage()
   },
-  mounted() {
-    this.$nextTick(() => {
-      this.initCharts()
-    })
-    window.addEventListener('resize', this.handleResize)
-  },
-  beforeDestroy() {
-    window.removeEventListener('resize', this.handleResize)
-    if (this.barChart1) this.barChart1.dispose()
-    if (this.barChart2) this.barChart2.dispose()
-  },
   methods: {
     getDefaultQueryParams() {
       return {
@@ -437,168 +331,6 @@ export default {
         productName: '',
         buyer: ''
       }
-    },
-    handleResize() {
-      if (this.barChart1) this.barChart1.resize()
-      if (this.barChart2) this.barChart2.resize()
-    },
-    initCharts() {
-      this.initBarChart1()
-      this.initBarChart2()
-    },
-    initBarChart1() {
-      const chartDom = this.$refs.barChart1
-      if (!chartDom) return
-      
-      this.barChart1 = echarts.init(chartDom)
-      
-      const categoryData = [
-        { name: '电子产品', value: 328 },
-        { name: '服装鞋帽', value: 256 },
-        { name: '家居用品', value: 198 },
-        { name: '图书音像', value: 156 },
-        { name: '运动户外', value: 124 }
-      ]
-      
-      const option = {
-        tooltip: {
-          trigger: 'axis',
-          axisPointer: {
-            type: 'shadow'
-          }
-        },
-        grid: {
-          left: '3%',
-          right: '10%',
-          bottom: '3%',
-          top: '3%',
-          containLabel: true
-        },
-        xAxis: {
-          type: 'value',
-          show: false
-        },
-        yAxis: {
-          type: 'category',
-          data: categoryData.map(item => item.name),
-          axisLine: {
-            show: false
-          },
-          axisTick: {
-            show: false
-          },
-          axisLabel: {
-            color: '#606266',
-            fontSize: 12
-          }
-        },
-        series: [
-          {
-            type: 'bar',
-            barWidth: '40%',
-            itemStyle: {
-              borderRadius: [0, 8, 8, 0],
-              color: {
-                type: 'linear',
-                x: 0,
-                y: 0,
-                x2: 1,
-                y2: 0,
-                colorStops: [
-                  { offset: 0, color: '#667eea' },
-                  { offset: 1, color: '#764ba2' }
-                ]
-              }
-            },
-            label: {
-              show: true,
-              position: 'right',
-              color: '#606266',
-              fontSize: 12
-            },
-            data: categoryData.map(item => item.value)
-          }
-        ]
-      }
-      
-      this.barChart1.setOption(option)
-    },
-    initBarChart2() {
-      const chartDom = this.$refs.barChart2
-      if (!chartDom) return
-      
-      this.barChart2 = echarts.init(chartDom)
-      
-      const regionData = [
-        { name: '广东省', value: 456 },
-        { name: '浙江省', value: 389 },
-        { name: '江苏省', value: 312 },
-        { name: '上海市', value: 278 },
-        { name: '北京市', value: 245 }
-      ]
-      
-      const option = {
-        tooltip: {
-          trigger: 'axis',
-          axisPointer: {
-            type: 'shadow'
-          }
-        },
-        grid: {
-          left: '3%',
-          right: '10%',
-          bottom: '3%',
-          top: '3%',
-          containLabel: true
-        },
-        xAxis: {
-          type: 'value',
-          show: false
-        },
-        yAxis: {
-          type: 'category',
-          data: regionData.map(item => item.name),
-          axisLine: {
-            show: false
-          },
-          axisTick: {
-            show: false
-          },
-          axisLabel: {
-            color: '#606266',
-            fontSize: 12
-          }
-        },
-        series: [
-          {
-            type: 'bar',
-            barWidth: '40%',
-            itemStyle: {
-              borderRadius: [0, 8, 8, 0],
-              color: {
-                type: 'linear',
-                x: 0,
-                y: 0,
-                x2: 1,
-                y2: 0,
-                colorStops: [
-                  { offset: 0, color: '#4facfe' },
-                  { offset: 1, color: '#00f2fe' }
-                ]
-              }
-            },
-            label: {
-              show: true,
-              position: 'right',
-              color: '#606266',
-              fontSize: 12
-            },
-            data: regionData.map(item => item.value)
-          }
-        ]
-      }
-      
-      this.barChart2.setOption(option)
     },
     getList() {
       this.loading = true
@@ -697,12 +429,9 @@ export default {
       
       XLSX.writeFile(workbook, `订单列表_${dateStr}.xlsx`)
     },
-    onActionClick({ action, row, index }) {
-      console.log('Action clicked:', action, row, index)
-    },
-    handleDetail(row) {
+    handleOrderDetail(row) {
       this.currentOrder = row
-      this.detailVisible = true
+      this.orderDetailVisible = true
     },
     handleCancel(row) {
       this.currentOrder = row
@@ -918,114 +647,6 @@ export default {
 
 .dialog-footer {
   text-align: right;
-}
-
-.chart-card {
-  border-radius: 16px;
-  overflow: hidden;
-}
-
-.chart-card ::v-deep .el-card__header {
-  padding: 16px 20px;
-  border-bottom: 1px solid #f0f2f5;
-}
-
-.chart-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.chart-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #303133;
-}
-
-.chart-container {
-  width: 100%;
-  height: 250px;
-}
-
-.table-wrapper {
-  max-height: 250px;
-  overflow-y: auto;
-}
-
-.table-wrapper ::v-deep .el-table th {
-  background-color: #f8fafc;
-  font-weight: 600;
-  color: #303133;
-  padding: 14px 0;
-}
-
-.table-wrapper ::v-deep .el-table td {
-  padding: 14px 0;
-}
-
-.table-wrapper ::v-deep .el-table--striped .el-table__body tr.el-table__row--striped td {
-  background: #fafbfc;
-}
-
-.table-wrapper ::v-deep .el-table__row:hover > td {
-  background-color: #f5f7fa !important;
-}
-
-.number-highlight {
-  font-weight: 600;
-  color: #303133;
-}
-
-.mom-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 10px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.mom-up {
-  background-color: rgba(103, 194, 58, 0.1);
-  color: #67c23a;
-}
-
-.mom-down {
-  background-color: rgba(245, 108, 108, 0.1);
-  color: #f56c6c;
-}
-
-.mom-badge i {
-  margin-right: 4px;
-}
-
-.ratio-bar {
-  position: relative;
-  height: 20px;
-  background-color: #f0f2f5;
-  border-radius: 10px;
-  overflow: hidden;
-}
-
-.ratio-fill {
-  position: absolute;
-  top: 0;
-  left: 0;
-  height: 100%;
-  background: linear-gradient(90deg, #667eea, #764ba2);
-  border-radius: 10px;
-  transition: width 0.3s ease;
-}
-
-.ratio-text {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 12px;
-  font-weight: 600;
-  color: #303133;
-  z-index: 1;
 }
 
 .text-red {
