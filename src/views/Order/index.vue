@@ -1,9 +1,5 @@
 <template>
   <div class="page-container">
-    <div class="page-header">
-      <h3 class="page-title">订单管理</h3>
-    </div>
-
     <div class="stats-cards">
       <div class="stat-card" @click="handleStatClick('today')">
         <div class="stat-icon today-icon">
@@ -152,19 +148,18 @@
           </template>
         </el-table-column>
       </el-table>
-    </div>
-
-    <div class="pagination-container">
-      <el-pagination
-        @size-change="handleSizeChange"
-        @current-change="handleCurrentChange"
-        :current-page="queryParams.pageNum"
-        :page-sizes="[10, 20, 50, 100]"
-        :page-size="queryParams.pageSize"
-        layout="total, sizes, prev, pager, next, jumper"
-        :total="total"
-      >
-      </el-pagination>
+      <div class="pagination-container">
+        <el-pagination
+          @size-change="handleSizeChange"
+          @current-change="handleCurrentChange"
+          :current-page="queryParams.pageNum"
+          :page-sizes="[10, 20, 50, 100]"
+          :page-size="queryParams.pageSize"
+          layout="total, sizes, prev, pager, next, jumper"
+          :total="total"
+        >
+        </el-pagination>
+      </div>
     </div>
 
     <el-dialog title="订单详情" :visible.sync="detailVisible" width="700px" :close-on-click-modal="false">
@@ -228,6 +223,7 @@
 </template>
 
 <script>
+import * as XLSX from 'xlsx';
 export default {
   name: 'Order',
   data() {
@@ -236,7 +232,7 @@ export default {
       submitLoading: false,
       searchLoading: false,
       total: 0,
-      activeTab: 'all',
+      activeTab: 'pending',
       queryParams: {
         pageNum: 1,
         pageSize: 10,
@@ -382,6 +378,28 @@ export default {
     },
     handleExport() {
       this.$message.success('正在导出Excel...')
+      
+      const exportData = this.orderList.map(item => ({
+        '订单号': item.orderNo,
+        '商品名称': item.productName,
+        '买家': item.buyer,
+        '卖家': item.seller,
+        '金额': `¥${item.amount}`,
+        '支付方式': item.paymentMethod,
+        '状态': this.getStatusText(item.status),
+        '下单时间': item.createTime
+      }))
+      
+      const worksheet = XLSX.utils.json_to_sheet(exportData)
+      const workbook = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(workbook, worksheet, '订单列表')
+      
+      const today = new Date()
+      const dateStr = today.getFullYear() + 
+        String(today.getMonth() + 1).padStart(2, '0') + 
+        String(today.getDate()).padStart(2, '0')
+      
+      XLSX.writeFile(workbook, `订单列表_${dateStr}.xlsx`)
     },
     handleSizeChange(val) {
       this.queryParams.pageSize = val
@@ -563,24 +581,33 @@ export default {
   padding: 24px;
   margin-bottom: 20px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  transition: all 0.3s ease;
+}
+
+.filter-container:hover {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
 
 .filter-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
   margin-bottom: 16px;
 }
 
 .filter-row:last-child {
   margin-bottom: 0;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
 }
 
 .filter-item {
   display: flex;
   align-items: center;
-  margin-right: 24px;
-  margin-bottom: 12px;
+  margin-bottom: 0;
+}
+
+.filter-item:last-child {
+  justify-content: flex-start;
 }
 
 .filter-label {
@@ -588,6 +615,7 @@ export default {
   color: #606266;
   margin-right: 8px;
   white-space: nowrap;
+  font-weight: 500;
 }
 
 .tabs-container {
@@ -675,10 +703,8 @@ export default {
   display: flex;
   justify-content: flex-end;
   margin-top: 20px;
-  padding: 20px;
-  background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  padding-top: 20px;
+  border-top: 1px solid #f0f0f0;
 }
 
 .text-red {
