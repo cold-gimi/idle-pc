@@ -41,6 +41,12 @@ const routes = [
         meta: { title: '商品列表', icon: 'el-icon-goods', roles: ['admin'] }
       },
       {
+        path: 'order',
+        name: 'Order',
+        component: () => import('@/views/Order/index.vue'),
+        meta: { title: '订单管理', icon: 'el-icon-s-order', roles: ['admin'] }
+      },
+      {
         path: 'permission',
         name: 'Permission',
         redirect: '/permission/dictionary',

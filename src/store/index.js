@@ -35,13 +35,20 @@ const allMenuList = [
   },
   {
     id: 5,
+    name: '订单管理',
+    path: '/order',
+    icon: 'el-icon-s-order',
+    roles: ['admin']
+  },
+  {
+    id: 6,
     name: '功能权限中心',
     path: '/permission',
     icon: 'el-icon-s-tools',
     roles: ['admin'],
     children: [
       {
-        id: 51,
+        id: 61,
         name: '数据字典管理',
         path: '/permission/dictionary',
         icon: 'el-icon-notebook-2',
