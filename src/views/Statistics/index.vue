@@ -135,16 +135,15 @@
             <div ref="lineChart" class="chart-container"></div>
           </el-card>
         </el-col>
-
-        <el-col :span="12">
-          <el-card class="chart-card" shadow="hover">
+        <el-col :span="12" style="display: flex;">
+          <el-card class="chart-card" shadow="hover" style="flex: 1;margin-right: 10px;">
             <div slot="header" class="chart-header">
               <span class="chart-title">商品分类发布 TOP5</span>
             </div>
             <div ref="barChart1" class="chart-container"></div>
           </el-card>
 
-          <el-card class="chart-card" shadow="hover" style="margin-top: 20px;">
+          <el-card class="chart-card" shadow="hover" style="flex: 1;margin-left: 10px;">
             <div slot="header" class="chart-header">
               <span class="chart-title">用户地区分布 TOP5</span>
             </div>
