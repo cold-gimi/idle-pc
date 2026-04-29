@@ -3,30 +3,47 @@ export default {
     return {
       loading: false,
       submitLoading: false,
+      searchLoading: false,
+      deleteLoading: false,
       total: 0,
       queryParams: {
         pageNum: 1,
         pageSize: 10
       },
       list: [],
+      selectedItems: [],
+      statusMap: {},
+      statusTypeMap: {},
       dialogVisible: false,
       dialogTitle: '',
+      detailVisible: false,
       isAdd: false,
       form: {},
-      rules: {}
+      rules: {},
+      currentItem: {},
+      dateRange: []
     }
   },
   methods: {
-    handleQuery() {
-      this.queryParams.pageNum = 1
+    initPage() {
       this.getList()
     },
+    handleQuery() {
+      if (this.searchLoading) return
+      this.searchLoading = true
+      this.queryParams.pageNum = 1
+      this.getList().finally(() => {
+        this.searchLoading = false
+      })
+    },
     resetQuery() {
-      this.queryParams = {
+      const defaultParams = {
         pageNum: 1,
         pageSize: 10,
         ...this.getDefaultQueryParams()
       }
+      this.queryParams = defaultParams
+      this.dateRange = []
       this.getList()
     },
     handleSizeChange(val) {
@@ -36,6 +53,9 @@ export default {
     handleCurrentChange(val) {
       this.queryParams.pageNum = val
       this.getList()
+    },
+    handleSelectionChange(val) {
+      this.selectedItems = val
     },
     handleAdd() {
       this.isAdd = true
@@ -55,8 +75,13 @@ export default {
       })
       this.dialogVisible = true
     },
+    handleDetail(row) {
+      this.currentItem = row
+      this.detailVisible = true
+    },
     handleDelete(row) {
-      this.$confirm(this.getDeleteConfirmText(), '警告', {
+      const deleteConfirmText = this.getDeleteConfirmText(row)
+      this.$confirm(deleteConfirmText, '警告', {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
         type: 'warning'
@@ -64,18 +89,42 @@ export default {
         this.deleteItem(row)
       }).catch(() => {})
     },
+    handleBatchDelete() {
+      if (this.selectedItems.length === 0) {
+        this.$message.warning('请先选择要删除的项')
+        return
+      }
+      this.$confirm(`是否确认删除选中的 ${this.selectedItems.length} 项?`, '警告', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(() => {
+        this.batchDeleteItems(this.selectedItems)
+      }).catch(() => {})
+    },
     submitForm() {
-      this.$refs.form.validate(valid => {
+      this.$refs.form.validate(async valid => {
         if (valid) {
           this.submitLoading = true
-          setTimeout(() => {
-            this.saveItem()
+          try {
+            await this.saveItem()
             this.dialogVisible = false
-            this.submitLoading = false
+            this.$message.success(this.isAdd ? '新增成功' : '修改成功')
             this.getList()
-          }, 500)
+          } catch (error) {
+            console.error('提交失败:', error)
+            this.$message.error(error.message || (this.isAdd ? '新增失败' : '修改失败'))
+          } finally {
+            this.submitLoading = false
+          }
         }
       })
+    },
+    getStatusText(status) {
+      return this.statusMap[status] || status
+    },
+    getStatusType(status) {
+      return this.statusTypeMap[status] || 'info'
     },
     getDefaultQueryParams() {
       return {}
@@ -89,23 +138,27 @@ export default {
     getEditTitle() {
       return '编辑'
     },
-    getDeleteConfirmText() {
+    getDeleteConfirmText(row) {
       return '是否确认删除该项?'
-    },
-    getStatusText(status, statusMap = {}) {
-      return statusMap[status] || status
-    },
-    getStatusType(status, typeMap = {}) {
-      return typeMap[status] || 'info'
     },
     getList() {
       console.warn('getList method should be implemented in component')
+      return Promise.resolve()
     },
     saveItem() {
       console.warn('saveItem method should be implemented in component')
+      return Promise.resolve()
     },
     deleteItem(row) {
       console.warn('deleteItem method should be implemented in component')
+      return Promise.resolve()
+    },
+    batchDeleteItems(items) {
+      console.warn('batchDeleteItems method should be implemented in component')
+      return Promise.resolve()
+    },
+    handleExport() {
+      this.$message.warning('导出功能需要在具体组件中实现')
     }
   }
 }

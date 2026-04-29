@@ -39,63 +39,20 @@
       </div>
     </div>
 
-    <div class="filter-container">
-      <el-row :gutter="20">
-        <el-col :span="8">
-          <div class="filter-item">
-            <span class="filter-label">时间范围：</span>
-            <el-date-picker
-              v-model="queryParams.dateRange"
-              type="daterange"
-              range-separator="至"
-              start-placeholder="开始日期"
-              end-placeholder="结束日期"
-              value-format="yyyy-MM-dd"
-              style="width: 100%;"
-            />
-          </div>
-        </el-col>
-        <el-col :span="8">
-          <div class="filter-item">
-            <span class="filter-label">订单状态：</span>
-            <el-select v-model="queryParams.status" placeholder="请选择状态" clearable>
-              <el-option label="待付款" value="pending" />
-              <el-option label="已付款" value="paid" />
-              <el-option label="已完成" value="completed" />
-              <el-option label="已退款" value="refunded" />
-              <el-option label="已取消" value="cancelled" />
-            </el-select>
-          </div>
-        </el-col>
-        <el-col :span="8">
-          <div class="filter-item">
-            <span class="filter-label">订单号：</span>
-            <el-input v-model="queryParams.orderNo" placeholder="请输入订单号" clearable @keyup.enter.native="handleQuery" />
-          </div>
-        </el-col>
-      </el-row>
-      <el-row :gutter="20" style="margin-top: 20px;">
-        <el-col :span="8">
-          <div class="filter-item">
-            <span class="filter-label">商品名称：</span>
-            <el-input v-model="queryParams.productName" placeholder="请输入商品名称" clearable @keyup.enter.native="handleQuery" />
-          </div>
-        </el-col>
-        <el-col :span="8">
-          <div class="filter-item">
-            <span class="filter-label">买家：</span>
-            <el-input v-model="queryParams.buyer" placeholder="请输入买家名称" clearable @keyup.enter.native="handleQuery" />
-          </div>
-        </el-col>
-        <el-col :span="8">
-          <div class="filter-item filter-buttons">
-            <el-button type="primary" icon="el-icon-search" @click="handleQuery" :loading="searchLoading">搜索</el-button>
-            <el-button icon="el-icon-refresh" @click="resetQuery">重置</el-button>
-            <el-button type="success" icon="el-icon-download" @click="handleExport">导出Excel</el-button>
-          </div>
-        </el-col>
-      </el-row>
-    </div>
+    <SearchForm
+      :search-fields="searchFields"
+      :query-params="queryParams"
+      :date-range="dateRange"
+      :loading="searchLoading"
+      label-width="70px"
+      :show-extra-buttons="true"
+      @search="onSearch"
+      @reset="onReset"
+    >
+      <template #extraButtons>
+        <el-button type="success" icon="el-icon-download" @click="handleExport">导出Excel</el-button>
+      </template>
+    </SearchForm>
 
     <div class="tabs-container">
       <el-tabs v-model="activeTab" @tab-click="handleTabClick">
@@ -120,59 +77,42 @@
       </el-tabs>
     </div>
 
-    <div class="table-container">
-      <el-table :data="orderList" v-loading="loading" stripe style="width: 100%" :header-cell-style="{ backgroundColor: '#f8fafc', color: '#606266' }">
-        <el-table-column prop="orderNo" label="订单号" min-width="180" show-overflow-tooltip />
-        <el-table-column prop="productName" label="商品名称" min-width="200" show-overflow-tooltip />
-        <el-table-column prop="buyer" label="买家" width="120" show-overflow-tooltip />
-        <el-table-column prop="seller" label="卖家" width="120" show-overflow-tooltip />
-        <el-table-column prop="amount" label="金额" width="120">
-          <template slot-scope="scope">
-            <span class="amount-text">¥{{ scope.row.amount }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="paymentMethod" label="支付方式" width="100" />
-        <el-table-column prop="status" label="状态" width="100">
-          <template slot-scope="scope">
-            <el-tag :type="getStatusType(scope.row.status)" size="small" effect="light" :round="true">
-              {{ getStatusText(scope.row.status) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="createTime" label="下单时间" width="170" />
-        <el-table-column label="操作" width="280" fixed="right" align="center">
-          <template slot-scope="scope">
-            <el-button type="text" size="small" @click="handleDetail(scope.row)">详情</el-button>
-            <template v-if="scope.row.status === 'pending'">
-              <el-button type="text" size="small" class="text-orange" @click="handleCancel(scope.row)">取消订单</el-button>
-            </template>
-            <template v-if="scope.row.status === 'paid'">
-              <el-button type="text" size="small" class="text-green" @click="handleConfirm(scope.row)">确认完成</el-button>
-              <el-button type="text" size="small" class="text-red" @click="handleRefund(scope.row)">退款</el-button>
-            </template>
-            <template v-if="scope.row.status === 'refund'">
-              <el-button type="text" size="small" class="text-green" @click="handleApproveRefund(scope.row)">同意</el-button>
-              <el-button type="text" size="small" class="text-red" @click="handleRejectRefund(scope.row)">拒绝</el-button>
-            </template>
-            <template v-if="scope.row.status === 'completed'">
-              <el-button type="text" size="small" class="text-red" @click="handleRefund(scope.row)">申请退款</el-button>
-            </template>
-          </template>
-        </el-table-column>
-      </el-table>
-      <div class="pagination-container">
-        <el-pagination
-          @size-change="handleSizeChange"
-          @current-change="handleCurrentChange"
-          :current-page="queryParams.pageNum"
-          :page-sizes="[10, 20, 50, 100]"
-          :page-size="queryParams.pageSize"
-          layout="total, sizes, prev, pager, next, jumper"
-          :total="total"
-        >
-        </el-pagination>
-      </div>
-    </div>
+    <DataTable
+      :table-data="orderList"
+      :columns="tableColumns"
+      :loading="loading"
+      :show-actions="true"
+      :actions-width="280"
+      :current-page="queryParams.pageNum"
+      :page-size="queryParams.pageSize"
+      :total="total"
+      :default-status-map="statusMap"
+      :default-status-type-map="statusTypeMap"
+      @size-change="handleSizeChange"
+      @current-change="handleCurrentChange"
+      @action-click="onActionClick"
+    >
+      <template #amount="{ row }">
+        <span class="amount-text">¥{{ row.amount }}</span>
+      </template>
+      <template #actions="{ row }">
+        <el-button type="text" size="small" @click="handleDetail(row)">详情</el-button>
+        <template v-if="row.status === 'pending'">
+          <el-button type="text" size="small" class="text-orange" @click="handleCancel(row)">取消订单</el-button>
+        </template>
+        <template v-if="row.status === 'paid'">
+          <el-button type="text" size="small" class="text-green" @click="handleConfirm(row)">确认完成</el-button>
+          <el-button type="text" size="small" class="text-red" @click="handleRefund(row)">退款</el-button>
+        </template>
+        <template v-if="row.status === 'refund'">
+          <el-button type="text" size="small" class="text-green" @click="handleApproveRefund(row)">同意</el-button>
+          <el-button type="text" size="small" class="text-red" @click="handleRejectRefund(row)">拒绝</el-button>
+        </template>
+        <template v-if="row.status === 'completed'">
+          <el-button type="text" size="small" class="text-red" @click="handleRefund(row)">申请退款</el-button>
+        </template>
+      </template>
+    </DataTable>
 
     <el-dialog title="订单详情" :visible.sync="detailVisible" width="700px" :close-on-click-modal="false">
       <el-descriptions :column="2" border size="small">
@@ -315,25 +255,19 @@
 <script>
 import * as XLSX from 'xlsx';
 import * as echarts from 'echarts';
+import listPageMixin from '@/mixins/listPage';
+import { SearchForm, DataTable } from '@/components';
 
 export default {
   name: 'Order',
+  components: {
+    SearchForm,
+    DataTable
+  },
+  mixins: [listPageMixin],
   data() {
     return {
-      loading: false,
-      submitLoading: false,
-      searchLoading: false,
-      total: 0,
       activeTab: 'pending',
-      queryParams: {
-        pageNum: 1,
-        pageSize: 10,
-        dateRange: [],
-        status: '',
-        orderNo: '',
-        productName: '',
-        buyer: ''
-      },
       orderList: [],
       statData: {
         today: 28,
@@ -365,10 +299,8 @@ export default {
         refunded: 'info',
         cancelled: 'info'
       },
-      detailVisible: false,
-      cancelVisible: false,
-      refundVisible: false,
       currentOrder: {},
+      cancelVisible: false,
       cancelReason: '',
       refundAmount: 0,
       refundReason: '',
@@ -390,8 +322,100 @@ export default {
       ]
     }
   },
+  computed: {
+    searchFields() {
+      return [
+        {
+          prop: 'dateRange',
+          label: '时间范围',
+          type: 'daterange',
+          style: 'width: 240px;'
+        },
+        {
+          prop: 'status',
+          label: '订单状态',
+          type: 'select',
+          options: [
+            { label: '待付款', value: 'pending' },
+            { label: '已付款', value: 'paid' },
+            { label: '已完成', value: 'completed' },
+            { label: '已退款', value: 'refunded' },
+            { label: '已取消', value: 'cancelled' }
+          ]
+        },
+        {
+          prop: 'orderNo',
+          label: '订单号',
+          type: 'input',
+          placeholder: '请输入订单号'
+        },
+        {
+          prop: 'productName',
+          label: '商品名称',
+          type: 'input',
+          placeholder: '请输入商品名称'
+        },
+        {
+          prop: 'buyer',
+          label: '买家',
+          type: 'input',
+          placeholder: '请输入买家名称'
+        }
+      ]
+    },
+    tableColumns() {
+      return [
+        {
+          prop: 'orderNo',
+          label: '订单号',
+          minWidth: 180,
+          showOverflowTooltip: true
+        },
+        {
+          prop: 'productName',
+          label: '商品名称',
+          minWidth: 200,
+          showOverflowTooltip: true
+        },
+        {
+          prop: 'buyer',
+          label: '买家',
+          width: 120,
+          showOverflowTooltip: true
+        },
+        {
+          prop: 'seller',
+          label: '卖家',
+          width: 120,
+          showOverflowTooltip: true
+        },
+        {
+          prop: 'amount',
+          label: '金额',
+          width: 120,
+          slot: 'amount'
+        },
+        {
+          prop: 'paymentMethod',
+          label: '支付方式',
+          width: 100
+        },
+        {
+          prop: 'status',
+          label: '状态',
+          width: 100,
+          type: 'status'
+        },
+        {
+          prop: 'createTime',
+          label: '下单时间',
+          width: 170
+        }
+      ]
+    }
+  },
   created() {
-    this.getList()
+    this.initPage()
   },
   mounted() {
     this.$nextTick(() => {
@@ -405,6 +429,15 @@ export default {
     if (this.barChart2) this.barChart2.dispose()
   },
   methods: {
+    getDefaultQueryParams() {
+      return {
+        dateRange: [],
+        status: '',
+        orderNo: '',
+        productName: '',
+        buyer: ''
+      }
+    },
     handleResize() {
       if (this.barChart1) this.barChart1.resize()
       if (this.barChart2) this.barChart2.resize()
@@ -569,11 +602,14 @@ export default {
     },
     getList() {
       this.loading = true
-      setTimeout(() => {
-        this.orderList = this.generateMockData()
-        this.total = this.tabCounts[this.activeTab]
-        this.loading = false
-      }, 500)
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          this.orderList = this.generateMockData()
+          this.total = this.tabCounts[this.activeTab]
+          this.loading = false
+          resolve()
+        }, 500)
+      })
     },
     generateMockData() {
       const statuses = ['pending', 'paid', 'completed', 'refunded', 'cancelled', 'refund']
@@ -615,12 +651,6 @@ export default {
         second: '2-digit'
       }).replace(/\//g, '-')
     },
-    getStatusText(status) {
-      return this.statusMap[status] || status
-    },
-    getStatusType(status) {
-      return this.statusTypeMap[status] || 'info'
-    },
     handleStatClick(type) {
       const tabMap = {
         today: 'all',
@@ -635,27 +665,12 @@ export default {
       this.queryParams.pageNum = 1
       this.getList()
     },
-    handleQuery() {
-      if (this.searchLoading) return
-      this.searchLoading = true
-      this.queryParams.pageNum = 1
-      this.getList()
-      setTimeout(() => {
-        this.searchLoading = false
-      }, 500)
+    onSearch() {
+      this.handleQuery()
     },
-    resetQuery() {
-      this.queryParams = {
-        pageNum: 1,
-        pageSize: 10,
-        dateRange: [],
-        status: '',
-        orderNo: '',
-        productName: '',
-        buyer: ''
-      }
+    onReset() {
+      this.resetQuery()
       this.activeTab = 'all'
-      this.getList()
     },
     handleExport() {
       this.$message.success('正在导出Excel...')
@@ -682,13 +697,8 @@ export default {
       
       XLSX.writeFile(workbook, `订单列表_${dateStr}.xlsx`)
     },
-    handleSizeChange(val) {
-      this.queryParams.pageSize = val
-      this.getList()
-    },
-    handleCurrentChange(val) {
-      this.queryParams.pageNum = val
-      this.getList()
+    onActionClick({ action, row, index }) {
+      console.log('Action clicked:', action, row, index)
     },
     handleDetail(row) {
       this.currentOrder = row
@@ -856,47 +866,6 @@ export default {
   margin-top: 6px;
 }
 
-.filter-container {
-  background: #fff;
-  border-radius: 16px;
-  padding: 24px;
-  margin-bottom: 20px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
-  transition: all 0.3s ease;
-}
-
-.filter-container:hover {
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-}
-
-.filter-item {
-  display: flex;
-  align-items: center;
-  width: 100%;
-}
-
-.filter-item .el-date-picker,
-.filter-item .el-select,
-.filter-item .el-input {
-  flex: 1;
-}
-
-.filter-buttons {
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.filter-label {
-  font-size: 14px;
-  color: #606266;
-  margin-right: 8px;
-  white-space: nowrap;
-  width: 70px;
-  min-width: 70px;
-  font-weight: 500;
-  text-align: right;
-}
-
 .tabs-container {
   background: #fff;
   border-radius: 16px 16px 0 0;
@@ -942,60 +911,9 @@ export default {
   font-weight: 600;
 }
 
-.table-container {
-  background: #fff;
-  border-radius: 0 0 16px 16px;
-  padding: 0 20px 20px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
-}
-
-.table-container ::v-deep .el-table {
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-.table-container ::v-deep .el-table th {
-  background-color: #f8fafc;
-  font-weight: 600;
-  color: #303133;
-  padding: 16px 0;
-}
-
-.table-container ::v-deep .el-table td {
-  padding: 16px 0;
-}
-
-.table-container ::v-deep .el-table--striped .el-table__body tr.el-table__row--striped td {
-  background: #fafbfc;
-}
-
-.table-container ::v-deep .el-table__row:hover > td {
-  background-color: #f5f7fa !important;
-}
-
 .amount-text {
   font-weight: 600;
   color: #f56c6c;
-}
-
-.pagination-container {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 20px;
-  padding-top: 20px;
-  border-top: 1px solid #f0f0f0;
-}
-
-.text-red {
-  color: #f56c6c !important;
-}
-
-.text-green {
-  color: #67c23a !important;
-}
-
-.text-orange {
-  color: #e6a23c !important;
 }
 
 .dialog-footer {
@@ -1108,6 +1026,18 @@ export default {
   font-weight: 600;
   color: #303133;
   z-index: 1;
+}
+
+.text-red {
+  color: #f56c6c !important;
+}
+
+.text-green {
+  color: #67c23a !important;
+}
+
+.text-orange {
+  color: #e6a23c !important;
 }
 
 @media (max-width: 1600px) {
