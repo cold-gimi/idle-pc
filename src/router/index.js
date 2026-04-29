@@ -53,6 +53,12 @@ const routes = [
         meta: { title: '数据统计', icon: 'el-icon-data-analysis', roles: ['admin'] }
       },
       {
+        path: 'report',
+        name: 'Report',
+        component: () => import('@/views/Report/index.vue'),
+        meta: { title: '举报管理', icon: 'el-icon-warning', roles: ['admin'] }
+      },
+      {
         path: 'permission',
         name: 'Permission',
         redirect: '/permission/dictionary',

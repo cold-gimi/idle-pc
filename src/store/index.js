@@ -48,6 +48,13 @@ const allMenuList = [
     roles: ['admin']
   },
   {
+    id: 52,
+    name: '举报管理',
+    path: '/report',
+    icon: 'el-icon-warning',
+    roles: ['admin']
+  },
+  {
     id: 6,
     name: '功能权限中心',
     path: '/permission',
