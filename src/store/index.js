@@ -55,6 +55,13 @@ const allMenuList = [
     roles: ['admin']
   },
   {
+    id: 53,
+    name: '评论管理',
+    path: '/comment',
+    icon: 'el-icon-chat-dot-round',
+    roles: ['admin']
+  },
+  {
     id: 6,
     name: '功能权限中心',
     path: '/permission',
