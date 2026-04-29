@@ -59,3 +59,27 @@ export function getAuditStats() {
     method: 'get'
   })
 }
+
+export function batchDeleteAudits(ids) {
+  return request({
+    url: '/audits/batch-delete',
+    method: 'delete',
+    data: { ids }
+  })
+}
+
+export function batchApproveAudits(ids) {
+  return request({
+    url: '/audits/batch-approve',
+    method: 'put',
+    data: { ids }
+  })
+}
+
+export function batchRejectAudits(ids, data) {
+  return request({
+    url: '/audits/batch-reject',
+    method: 'put',
+    data: { ids, ...data }
+  })
+}

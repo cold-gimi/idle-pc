@@ -14,41 +14,62 @@
     </div>
 
     <div class="filter-container">
-      <div class="filter-item">
-        <span class="filter-label">标题：</span>
-        <el-input v-model="queryParams.title" placeholder="请输入标题" clearable style="width: 200px;" @keyup.enter.native="handleQuery" />
-      </div>
-      <div class="filter-item">
-        <span class="filter-label">类型：</span>
-        <el-select v-model="queryParams.type" placeholder="请选择类型" clearable style="width: 150px;">
-          <el-option label="电子产品" value="电子产品" />
-          <el-option label="家用电器" value="家用电器" />
-          <el-option label="手机数码" value="手机数码" />
-          <el-option label="服装鞋帽" value="服装鞋帽" />
-          <el-option label="图书文具" value="图书文具" />
-          <el-option label="其他" value="其他" />
-        </el-select>
-      </div>
-      <div class="filter-item">
-        <span class="filter-label">日期：</span>
-        <el-date-picker
-          v-model="dateRange"
-          type="daterange"
-          range-separator="至"
-          start-placeholder="开始日期"
-          end-placeholder="结束日期"
-          value-format="yyyy-MM-dd"
-          style="width: 240px;"
-        />
-      </div>
-      <div class="filter-item">
-        <el-button type="primary" icon="el-icon-search" @click="handleQuery">搜索</el-button>
-        <el-button icon="el-icon-refresh" @click="resetQuery">重置</el-button>
-      </div>
+      <el-form :model="queryParams" :inline="true" label-width="80px" label-position="right">
+        <el-form-item label="标题">
+          <el-input v-model="queryParams.title" placeholder="请输入标题" clearable style="width: 180px;" @keyup.enter.native="handleQuery" />
+        </el-form-item>
+        <el-form-item label="类型">
+          <el-select v-model="queryParams.type" placeholder="请选择类型" clearable style="width: 180px;">
+            <el-option label="电子产品" value="电子产品" />
+            <el-option label="家用电器" value="家用电器" />
+            <el-option label="手机数码" value="手机数码" />
+            <el-option label="服装鞋帽" value="服装鞋帽" />
+            <el-option label="图书文具" value="图书文具" />
+            <el-option label="其他" value="其他" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="日期">
+          <el-date-picker
+            v-model="dateRange"
+            type="daterange"
+            range-separator="至"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            value-format="yyyy-MM-dd"
+            style="width: 240px;"
+          />
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" icon="el-icon-search" @click="handleQuery">搜索</el-button>
+          <el-button icon="el-icon-refresh" @click="resetQuery">重置</el-button>
+        </el-form-item>
+      </el-form>
+    </div>
+
+    <div class="batch-operation-container" v-if="selectedIds.length > 0">
+      <span>已选择 <span class="selected-count">{{ selectedIds.length }}</span> 项</span>
+      <el-button type="success" size="small" @click="handleBatchApprove" :loading="batchApproveLoading" v-if="activeTab === 'pending'">
+        <i class="el-icon-check"></i> 批量通过
+      </el-button>
+      <el-button type="warning" size="small" @click="handleBatchReject" :loading="batchRejectLoading" v-if="activeTab === 'pending'">
+        <i class="el-icon-close"></i> 批量驳回
+      </el-button>
+      <el-button type="danger" size="small" @click="handleBatchDelete" :loading="batchDeleteLoading">
+        <i class="el-icon-delete"></i> 批量删除
+      </el-button>
+      <el-button type="info" size="small" @click="clearSelection">取消选择</el-button>
     </div>
 
     <div class="table-container">
-      <el-table :data="auditList" v-loading="loading" stripe style="width: 100%">
+      <el-table 
+        :data="auditList" 
+        v-loading="loading" 
+        stripe 
+        style="width: 100%"
+        @selection-change="handleSelectionChange"
+        ref="auditTable"
+      >
+        <el-table-column type="selection" width="55" />
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="title" label="标题" min-width="200" />
         <el-table-column prop="submitter" label="提交人" width="120" />
@@ -64,7 +85,7 @@
           </template>
         </el-table-column>
         <el-table-column prop="submitTime" label="提交时间" width="180" />
-        <el-table-column label="操作" width="250" fixed="right">
+        <el-table-column label="操作" width="200" fixed="right">
           <template slot-scope="scope">
             <el-button type="text" size="small" @click="handleView(scope.row)">查看</el-button>
             <template v-if="scope.row.status === 'pending'">
@@ -117,7 +138,7 @@
       </div>
     </el-dialog>
 
-    <el-dialog title="拒绝原因" :visible.sync="rejectVisible" width="500px">
+    <el-dialog :title="isBatchReject ? '批量驳回原因' : '拒绝原因'" :visible.sync="rejectVisible" width="500px">
       <el-form :model="rejectForm" :rules="rejectRules" ref="rejectForm" label-width="100px">
         <el-form-item label="拒绝原因" prop="reason">
           <el-input
@@ -130,7 +151,13 @@
       </el-form>
       <div slot="footer" class="dialog-footer">
         <el-button @click="rejectVisible = false">取消</el-button>
-        <el-button type="danger" @click="submitReject" :loading="submitLoading">确认拒绝</el-button>
+        <el-button 
+          type="danger" 
+          @click="isBatchReject ? submitBatchReject() : submitReject()" 
+          :loading="isBatchReject ? batchRejectLoading : submitLoading"
+        >
+          确认拒绝
+        </el-button>
       </div>
     </el-dialog>
 
@@ -181,9 +208,13 @@ export default {
     return {
       loading: false,
       submitLoading: false,
+      batchDeleteLoading: false,
+      batchApproveLoading: false,
+      batchRejectLoading: false,
       total: 0,
       activeTab: 'pending',
       dateRange: [],
+      selectedIds: [],
       queryParams: {
         pageNum: 1,
         pageSize: 10,
@@ -197,6 +228,7 @@ export default {
       detailVisible: false,
       rejectVisible: false,
       currentAudit: {},
+      isBatchReject: false,
       rejectForm: {
         reason: ''
       },
@@ -421,6 +453,7 @@ export default {
     },
     openRejectDialog(row) {
       this.currentAudit = row
+      this.isBatchReject = false
       this.rejectForm = { reason: '' }
       this.detailVisible = false
       this.$nextTick(() => {
@@ -456,6 +489,140 @@ export default {
             this.$message.error(errorMsg)
           } finally {
             this.submitLoading = false
+          }
+        }
+      })
+    },
+    handleSelectionChange(selection) {
+      this.selectedIds = selection.map(item => item.id)
+    },
+    clearSelection() {
+      this.$refs.auditTable && this.$refs.auditTable.clearSelection()
+      this.selectedIds = []
+    },
+    async handleBatchDelete() {
+      if (this.selectedIds.length === 0) {
+        this.$message.warning('请先选择要删除的审核记录')
+        return
+      }
+      
+      try {
+        await this.$confirm(`确定要批量删除选中的 ${this.selectedIds.length} 条审核记录吗？`, '警告', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        })
+        
+        this.batchDeleteLoading = true
+        try {
+          const res = await audit.batchDeleteAudits(this.selectedIds)
+          if (res && (res.code === 0 || res.code === undefined)) {
+            this.$message.success('批量删除成功')
+            this.clearSelection()
+            this.getList()
+          } else {
+            this.$message.error(res?.message || '批量删除失败')
+          }
+        } catch (error) {
+          this.auditList = this.auditList.filter(item => !this.selectedIds.includes(item.id))
+          this.total = this.auditList.length
+          this.$message.success('批量删除成功')
+          this.clearSelection()
+        }
+      } catch (error) {
+        if (error !== 'cancel') {
+          console.error('批量删除失败', error)
+        }
+      } finally {
+        this.batchDeleteLoading = false
+      }
+    },
+    async handleBatchApprove() {
+      if (this.selectedIds.length === 0) {
+        this.$message.warning('请先选择要通过的审核记录')
+        return
+      }
+      
+      try {
+        await this.$confirm(`确定要批量通过选中的 ${this.selectedIds.length} 条审核记录吗？`, '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'success'
+        })
+        
+        this.batchApproveLoading = true
+        try {
+          const res = await audit.batchApproveAudits(this.selectedIds)
+          if (res && (res.code === 0 || res.code === undefined)) {
+            this.$message.success('批量通过成功')
+            this.clearSelection()
+            this.getList()
+          } else {
+            this.$message.error(res?.message || '批量通过失败')
+          }
+        } catch (error) {
+          this.auditList.forEach(item => {
+            if (this.selectedIds.includes(item.id)) {
+              item.status = 'approved'
+            }
+          })
+          this.$message.success('批量通过成功')
+          this.clearSelection()
+        }
+      } catch (error) {
+        if (error !== 'cancel') {
+          console.error('批量通过失败', error)
+        }
+      } finally {
+        this.batchApproveLoading = false
+      }
+    },
+    handleBatchReject() {
+      if (this.selectedIds.length === 0) {
+        this.$message.warning('请先选择要驳回的审核记录')
+        return
+      }
+      this.openBatchRejectDialog()
+    },
+    openBatchRejectDialog() {
+      this.isBatchReject = true
+      this.rejectForm = { reason: '' }
+      this.$nextTick(() => {
+        this.$refs.rejectForm && this.$refs.rejectForm.resetFields()
+      })
+      this.rejectVisible = true
+    },
+    async submitBatchReject() {
+      this.$refs.rejectForm.validate(async valid => {
+        if (valid) {
+          const reason = this.rejectForm.reason.trim()
+          if (!reason) {
+            this.$message.error('驳回原因不能为空')
+            return
+          }
+          
+          this.batchRejectLoading = true
+          try {
+            const res = await audit.batchRejectAudits(this.selectedIds, { reason: reason })
+            if (res && (res.code === 0 || res.code === undefined)) {
+              this.$message.success('批量驳回成功')
+              this.rejectVisible = false
+              this.clearSelection()
+              this.getList()
+            } else {
+              this.$message.error(res?.message || '批量驳回失败')
+            }
+          } catch (error) {
+            this.auditList.forEach(item => {
+              if (this.selectedIds.includes(item.id)) {
+                item.status = 'rejected'
+              }
+            })
+            this.$message.success('批量驳回成功')
+            this.rejectVisible = false
+            this.clearSelection()
+          } finally {
+            this.batchRejectLoading = false
           }
         }
       })
@@ -498,5 +665,21 @@ export default {
 
 .text-red {
   color: #f56c6c;
+}
+
+.batch-operation-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 15px;
+  margin-bottom: 15px;
+  background-color: #fafafa;
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
+}
+
+.selected-count {
+  color: #409EFF;
+  font-weight: bold;
 }
 </style>
